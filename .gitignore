@@ -1,0 +1,13 @@
+# Dependencies / build output
+node_modules
+app/dist
+dist
+
+# Local tooling
+.claude/settings.local.json
+*.log
+.DS_Store
+
+# Internal planning docs — kept out of the public repo (see README).
+# The seminar-card mock-up (PNG) is intentionally NOT ignored.
+docs/*.docx
