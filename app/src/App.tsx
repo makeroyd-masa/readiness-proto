@@ -7,7 +7,7 @@ import { scoreProfile } from './domain/scoring';
 import { loadProfile, logEvent, resetProfile, saveProfile } from './store/profileStore';
 import { assertFlowIntegrity } from './engine/guards';
 import { householdReadinessFlow } from './content/flow';
-import { Mark, ReadinessMeter } from './ui/common';
+import { ReadinessMeter } from './ui/common';
 import { StandardMode } from './ui/StandardMode';
 import { SeminarMode } from './ui/SeminarMode';
 import { ReturningMode } from './ui/ReturningMode';
@@ -76,9 +76,7 @@ export default function App() {
   return (
     <div className="device">
       <div className="topbar">
-        <span className="mark">
-          <Mark />
-        </span>
+        <img className="mark" src={`${import.meta.env.BASE_URL}masa-icon.jpg`} alt="MASA" />
         <div className="brandwrap">
           <span className="sam">AccessNow</span>
           <span className="by">by MASA</span>

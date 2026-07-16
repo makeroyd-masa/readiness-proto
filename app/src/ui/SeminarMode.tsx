@@ -71,16 +71,16 @@ export function SeminarMode({ profile, commit, track }: { profile: Profile; comm
 
         {step === 2 && (
           <>
-            <div className="bigq">Ready — print the attendee's card.</div>
+            <div className="bigq">Ready — hand the attendee their card.</div>
             <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, marginBottom: 14 }}>
-              Their suggested first step: <strong>{firstStep}</strong>. Hand them the printed card — it carries
-              their <strong>resume code {code}</strong> and a QR that opens the app to finish the full file at home.
+              Their suggested first step: <strong>{firstStep}</strong>. Give them the card — a blank household
+              emergency card to fill in, with a QR on the back that opens the app to finish the full file at home.
             </p>
             <button
               className="btn btn-horizon btn-lg btn-block"
               disabled={!qr}
               onClick={() => {
-                printSeminarCard(agent || 'MASA agent', code, qr);
+                printSeminarCard(qr);
                 track('seminar_card_printed', { code });
               }}
             >

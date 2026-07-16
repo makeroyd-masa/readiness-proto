@@ -108,12 +108,13 @@ export function printWalletCard(p: Profile): void {
 /**
  * Seminar card (PRD §5.2) — the pre-printed leave-behind, front + back.
  * Mirrors docs/masa_seminar_blank_stock_card_front_back.png: a fill-by-hand
- * household emergency card (front) and a "finish your plan at home" QR + resume
- * code (back). The QR encodes `resumeUrl(code)`, so scanning it lands the lead
- * on this app's finish-at-home flow. Guardrail: no medications/diagnoses printed —
- * the front is blank write-in lines the household fills in themselves (§5.2, §13).
+ * household emergency card (front) and a "finish your plan at home" QR (back).
+ * The QR encodes `resumeUrl(...)`, so scanning it lands the lead on this app's
+ * finish-at-home flow. Every text field is a blank write-in line: the initial
+ * rollout is generic pre-printed stock (no per-attendee printing), and no
+ * medications/diagnoses are ever printed (§5.2, §13).
  */
-export function printSeminarCard(agentName: string, code: string, qrMarkup: string): void {
+export function printSeminarCard(qrMarkup: string): void {
   const B = BRAND;
   const BLUE = '#1f6fd4';
   const w = window.open('', '_blank', 'width=1100,height=760');
@@ -147,8 +148,8 @@ export function printSeminarCard(agentName: string, code: string, qrMarkup: stri
         <div class="scan"><div style="color:${BLUE};font-weight:700;font-size:18px;line-height:1.2">Scan to<br>finish</div></div>
       </div>
       <div class="callout"><div style="font-weight:700;color:${B}">Helping a parent?</div><div>Scan this to finish Mom or Dad's plan with them, from anywhere.</div></div>
-      <div class="fill"><span>Resume code</span><b>${esc(code)}</b></div>
-      <div class="fill"><span>Your MASA agent</span><b>${esc(agentName)}</b></div>
+      <div class="fill"><span>Resume code</span><b></b></div>
+      <div class="fill"><span>Your MASA agent</span><b></b></div>
       <div class="backfoot"><span>masaaccess.com</span><span>2 million members served since 1974</span></div>
     </section>`;
 
@@ -157,13 +158,13 @@ export function printSeminarCard(agentName: string, code: string, qrMarkup: stri
     *{box-sizing:border-box}
     body{font-family:'Segoe UI',system-ui,sans-serif;color:#262626;margin:0;background:#f0eeea;}
     .sheet{display:flex;gap:28px;justify-content:center;flex-wrap:wrap;padding:30px;}
-    .card{background:#fff;border:2px solid ${B};border-left:8px solid ${B};border-radius:18px;width:360px;min-height:560px;padding:26px 28px;position:relative;}
+    .card{background:#fff;border:2px solid ${B};border-left:8px solid ${B};border-radius:18px;width:360px;min-height:560px;padding:26px 28px;display:flex;flex-direction:column;overflow:hidden;}
     .wordmark{height:34px;display:block;}
     .eyebrow{color:${BLUE};font-weight:600;font-size:15px;margin-top:6px;}
     h2{color:${B};font-size:26px;margin:6px 0 0;font-weight:800;}
     .rule{border-bottom:1.5px solid #cfc9d6;margin-top:10px;}
     .hint{color:#8b8b8b;font-size:12.5px;margin-top:4px;}
-    .front .pinkfoot{position:absolute;left:0;right:0;bottom:0;background:#fbe9e9;border-radius:0 0 14px 14px;padding:14px 28px;font-size:13.5px;line-height:1.5;}
+    .front .pinkfoot{margin:auto -28px -26px;background:#fbe9e9;padding:16px 28px;font-size:13.5px;line-height:1.5;}
     .back .body{font-size:15px;line-height:1.55;margin:10px 0 18px;}
     .qrrow{display:flex;align-items:center;gap:18px;}
     .qrbox{border:1.5px solid #d8d4de;border-radius:10px;padding:12px;width:130px;height:130px;}
@@ -171,13 +172,11 @@ export function printSeminarCard(agentName: string, code: string, qrMarkup: stri
     .callout{background:#dcecfa;border-left:5px solid ${B};padding:12px 14px;margin:20px 0;font-size:14px;line-height:1.45;}
     .fill{display:flex;align-items:baseline;gap:12px;font-weight:700;color:${B};font-size:15px;margin-top:16px;}
     .fill b{flex:1;border-bottom:1.5px solid #b9b3c4;color:#262626;font-weight:600;padding-bottom:2px;}
-    .backfoot{position:absolute;left:28px;right:28px;bottom:22px;display:flex;justify-content:space-between;color:#9a9a9a;font-size:12.5px;border-top:1px solid #e6e2ea;padding-top:10px;}
-    .stamp{text-align:center;color:#b7b2be;font-size:11px;padding:0 30px 22px;}
+    .backfoot{margin-top:auto;display:flex;justify-content:space-between;gap:12px;color:#9a9a9a;font-size:12.5px;border-top:1px solid #e6e2ea;padding-top:14px;}
     @media print{ body{background:#fff} .noprint{display:none} .sheet{padding:0} @page{size:landscape;margin:12mm} }
   </style></head><body>
   <div class="sheet">${front}${back}</div>
-  <div class="stamp">Internal prototype — synthetic data, not for distribution. ${esc(disclaimer)}</div>
-  <div class="noprint" style="text-align:center;padding:0 0 24px"><button onclick="window.print()" style="padding:10px 18px;font-size:14px;background:${B};color:#fff;border:none;border-radius:6px;cursor:pointer">Print / Save as PDF</button></div>
+  <div class="noprint" style="text-align:center;padding:24px 0"><button onclick="window.print()" style="padding:10px 18px;font-size:14px;background:${B};color:#fff;border:none;border-radius:6px;cursor:pointer">Print / Save as PDF</button></div>
   </body></html>`);
   w.document.close();
   setTimeout(() => w.print(), 400);
