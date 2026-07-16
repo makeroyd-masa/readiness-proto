@@ -75,15 +75,13 @@ export default function App() {
 
   return (
     <div className="device">
-      <div className="intbanner">INTERNAL PROTOTYPE · synthetic data · content licensing not cleared · not for distribution</div>
-
       <div className="topbar">
         <span className="mark">
           <Mark />
         </span>
         <div className="brandwrap">
-          <span className="sam">Ask SAM</span>
-          <span className="by">from MASA</span>
+          <span className="sam">AccessNow</span>
+          <span className="by">by MASA</span>
         </div>
         <span className="tag">READINESS CHECK</span>
       </div>

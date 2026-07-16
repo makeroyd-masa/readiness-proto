@@ -1,4 +1,4 @@
-/* MASA / Ask SAM theme — ported from the well-received v1 prototype look.
+/* MASA / AccessNow theme — ported from the well-received v1 prototype look.
    Fonts are self-hosted-free system stack fallbacks; no external font CDN so the
    internal prototype runs offline. */
 
@@ -43,17 +43,6 @@ body {
   flex-direction: column;
   min-height: 780px;
   position: relative;
-}
-
-/* internal-only banner (licensing not cleared) */
-.intbanner {
-  background: repeating-linear-gradient(45deg, #2a2a2a, #2a2a2a 12px, #232323 12px, #232323 24px);
-  color: #ffd040;
-  font-size: 10px;
-  letter-spacing: 0.4px;
-  text-align: center;
-  padding: 4px 8px;
-  font-weight: 700;
 }
 
 /* Header */
@@ -237,6 +226,6 @@ body {
 @media print {
   body { background: #fff; padding: 0; }
   .device { box-shadow: none; max-width: none; min-height: 0; }
-  .topbar, .devbar, .spine, .intbanner, .no-print { display: none !important; }
+  .topbar, .devbar, .spine, .no-print { display: none !important; }
   .stage { overflow: visible; }
 }
