@@ -4,7 +4,7 @@ import { scoreProfile } from '../domain/scoring';
 import { nextSteps, type RankedStep } from '../domain/steps';
 import { getEvidence } from '../content/evidence';
 import { coverageCopy, COVERAGE_QUESTIONS, MASA_STATS } from '../content/coverage';
-import { Mark, SamBubble } from './common';
+import { Mark, SamBubble, Scorecard } from './common';
 import { printFullFile, printWalletCard } from './print';
 
 interface Props {
@@ -68,21 +68,7 @@ export function Result({ profile, commit, track }: Props) {
       </SamBubble>
 
       {/* Scorecard — band first, % secondary (PRD §8.2) */}
-      <div className="scorecard">
-        <span className="mk">
-          <Mark />
-        </span>
-        <div className="kicker">Household readiness</div>
-        <div className="band">{score.band}</div>
-        <div className="pct">
-          {score.displayPct}% · {score.solidCount} of {score.dimensions.length} areas solid
-        </div>
-        <div className="barwrap">
-          <div className="bar">
-            <i style={{ width: `${score.displayPct}%` }} />
-          </div>
-        </div>
-      </div>
+      <Scorecard score={score} />
 
       {/* Dimensions — coverage is deliberately NOT here (PRD §8) */}
       <div className="section-h">Your readiness, area by area</div>

@@ -215,6 +215,36 @@ body {
 .seminar .bigopts { display: flex; flex-direction: column; gap: 12px; }
 .seminar-guard { background: #fff8e6; border: 1px solid var(--masa-shine); border-radius: 8px; padding: 10px 12px; font-size: 11.5px; color: #7a5b00; margin-top: 18px; line-height: 1.5; }
 
+/* Seminar reveal — the customer payoff after the two taps */
+.semstep { display: flex; gap: 12px; align-items: flex-start; background: #faf9fc; border: 1px solid var(--masa-harbor-tint); border-radius: 8px; padding: 12px 13px; margin-bottom: 10px; }
+.semnum { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--masa-tide); color: #fff; font-family: var(--font-heading); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+.semtitle { font-family: var(--font-heading); font-weight: 600; font-size: 14.5px; color: var(--masa-horizon); margin-bottom: 3px; }
+.semdesc { font-size: 12.5px; line-height: 1.45; color: #555; }
+
+/* Take-home ("Text me my link") CTA */
+.takehome { background: #f4f7fc; border: 1px solid #d6e2f2; border-radius: var(--radius-card); padding: 16px; margin: 22px 0 8px; }
+.takehome .th-h { font-family: var(--font-heading); font-weight: 700; font-size: 15px; color: var(--masa-horizon); margin-bottom: 6px; }
+.th-copy { font-size: 13px; line-height: 1.5; color: #4a4a4a; margin-bottom: 12px; }
+.th-label { display: block; font-size: 11px; color: var(--masa-harbor); margin-bottom: 5px; }
+.th-row { display: flex; gap: 8px; }
+.th-row input { flex: 1; min-width: 0; border: 1px solid var(--masa-harbor-tint); border-radius: 8px; padding: 10px 12px; font-family: var(--font-body); font-size: 13px; }
+.th-row .btn { flex-shrink: 0; }
+.th-sent { font-size: 13px; line-height: 1.5; color: #1c7a45; }
+.th-link { font-size: 11px; color: var(--masa-harbor); word-break: break-all; margin-top: 8px; }
+.th-id { font-size: 12.5px; color: var(--masa-body); margin-top: 14px; padding-top: 12px; border-top: 1px dashed #d6e2f2; }
+.th-id strong { color: var(--masa-horizon); letter-spacing: 0.5px; }
+.th-idnote { color: var(--masa-harbor); }
+
+/* Small proto affordance: view the (empty) printed card */
+.protolink { display: block; width: 100%; background: none; border: none; text-align: center; color: var(--masa-harbor); font-size: 12px; text-decoration: underline; cursor: pointer; margin-top: 14px; padding: 6px; font-family: var(--font-body); }
+.protolink:disabled { opacity: 0.5; cursor: default; text-decoration: none; }
+
+/* Resume "enter your follow-up ID" (generic QR path) */
+.resume-entry { text-align: left; background: #faf9fc; border: 1px solid var(--masa-harbor-tint); border-radius: var(--radius-card); padding: 16px; margin-bottom: 22px; }
+.resume-entry label { display: block; font-family: var(--font-heading); font-weight: 600; font-size: 12.5px; color: var(--masa-horizon); margin-bottom: 4px; }
+.resume-hint { font-size: 12px; color: var(--masa-harbor); margin-bottom: 10px; line-height: 1.45; }
+.resume-entry input { width: 100%; border: 1px solid var(--masa-harbor-tint); border-radius: 8px; padding: 11px 12px; font-family: var(--font-body); font-size: 15px; letter-spacing: 1px; }
+
 /* Print card */
 .wallet { border: 2px solid var(--masa-horizon); border-radius: 10px; padding: 14px; margin: 12px 0; }
 .wallet .wt { font-family: var(--font-heading); font-weight: 700; color: var(--masa-horizon); font-size: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; }

@@ -1,16 +1,31 @@
+import { useState } from 'react';
 import { Mark } from './common';
 
 /**
- * The home end of the seminar loop (PRD §5.2). Reached when the app is opened with
- * `?resume=CODE` — i.e. someone scanned the QR on the printed seminar card. Mirrors
- * the card's back copy ("Finish your plan at home") and drops the lead straight into
- * the full readiness flow.
+ * The home end of the seminar loop (PRD §5.2). Two ways in, both to the same
+ * mobile-responsive experience:
+ *  - `autologin` — reached via the SMS link `?resume=CODE`. The follow-up ID is
+ *    in the URL, so the lead is recognized and just continues.
+ *  - `enterId` — reached via the generic QR on the pre-printed card (`?finish=1`).
+ *    The lead types the follow-up ID the agent hand-wrote on their card.
  *
  * Honest-prototype note: there is no backend to restore a seminar-started profile
  * from another device, so this continues into a fresh full check rather than
- * pretending to rehydrate server state. The code is shown as the token it is.
+ * pretending to rehydrate server state. The code is shown/entered as the token it is.
  */
-export function ResumeMode({ code, onContinue }: { code: string; onContinue: () => void }) {
+export function ResumeMode({
+  variant,
+  code,
+  onContinue,
+}: {
+  variant: 'autologin' | 'enterId';
+  code?: string;
+  onContinue: (code: string) => void;
+}) {
+  const [entered, setEntered] = useState('');
+  const isEnter = variant === 'enterId';
+  const canContinue = isEnter ? entered.trim().length > 0 : true;
+
   return (
     <div className="stage">
       <div className="intro">
@@ -22,13 +37,30 @@ export function ResumeMode({ code, onContinue }: { code: string; onContinue: () 
           You started your Family Readiness File at the seminar. Let's finish it — about five minutes — to get your
           full plan, plus what to ask about emergency transport coverage.
         </p>
-        <div className="previewmeter">
-          <div className="t">Resuming from your card</div>
-          <div className="pill-row">
-            <span className="pill">Resume code · {code}</span>
+
+        {isEnter ? (
+          <div className="resume-entry">
+            <label htmlFor="followup">Enter your follow-up ID</label>
+            <div className="resume-hint">It's the code your MASA agent wrote on your card.</div>
+            <input
+              id="followup"
+              value={entered}
+              onChange={(e) => setEntered(e.target.value.toUpperCase())}
+              placeholder="e.g. 4F9A2C7B"
+              autoCapitalize="characters"
+              autoComplete="off"
+            />
           </div>
-        </div>
-        <button className="btn btn-primary btn-block" onClick={onContinue}>
+        ) : (
+          <div className="previewmeter">
+            <div className="t">Welcome back — we've got your plan</div>
+            <div className="pill-row">
+              <span className="pill">Follow-up ID · {code}</span>
+            </div>
+          </div>
+        )}
+
+        <button className="btn btn-primary btn-block" disabled={!canContinue} onClick={() => onContinue(isEnter ? entered.trim() : (code ?? ''))}>
           Continue my plan →
         </button>
         <div className="disc">

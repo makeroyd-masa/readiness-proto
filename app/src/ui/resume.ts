@@ -19,9 +19,21 @@ export function resumeCode(p: Profile): string {
   return p.sessionId.slice(0, 8).toUpperCase();
 }
 
-/** Absolute URL the card's QR encodes. Works on localhost and on Pages. */
+/**
+ * The SMS deep link. The follow-up ID is appended so opening it auto-logs the
+ * lead in (no manual entry). Works on localhost and on Pages.
+ */
 export function resumeUrl(code: string): string {
   return `${window.location.origin}${import.meta.env.BASE_URL}?resume=${encodeURIComponent(code)}`;
+}
+
+/**
+ * The GENERIC finish URL the pre-printed card's QR encodes — no code, because
+ * the card is generic printed stock. A lead who scans it lands on the "enter your
+ * follow-up ID" screen (the agent hand-writes that ID on the card).
+ */
+export function finishUrl(): string {
+  return `${window.location.origin}${import.meta.env.BASE_URL}?finish=1`;
 }
 
 /** Render a QR for `text` as an inline SVG string (no network, embeds in print HTML). */

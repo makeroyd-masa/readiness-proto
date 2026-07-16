@@ -14,8 +14,11 @@ import { ReturningMode } from './ui/ReturningMode';
 import { ResumeMode } from './ui/ResumeMode';
 import { Result } from './ui/Result';
 
-/** Resume code from a scanned seminar-card QR (?resume=CODE), read once at load. */
-const initialResumeCode = new URLSearchParams(window.location.search).get('resume');
+// Read the seminar-loop entry params once at load:
+//  ?resume=CODE → SMS deep link, auto-login.   ?finish → generic card QR, enter-ID.
+const _params = new URLSearchParams(window.location.search);
+const initialResumeCode = _params.get('resume');
+const initialFinish = _params.get('finish') != null;
 
 // Dev-time integrity check — makes the v1 dead-branch class of bug fail loudly (§18).
 if (import.meta.env.DEV) assertFlowIntegrity(householdReadinessFlow);
@@ -28,6 +31,7 @@ export default function App() {
   const [returningView, setReturningView] = useState<ReturningView>('menu');
   const [instance, setInstance] = useState(0); // bump to remount a mode
   const [resumeCode, setResumeCode] = useState<string | null>(initialResumeCode);
+  const [finishEntry, setFinishEntry] = useState(initialFinish);
   const [standardAutostart, setStandardAutostart] = useState(false);
 
   const commit = (next: Profile) => setProfile(saveProfile(next));
@@ -49,6 +53,8 @@ export default function App() {
     setProfile(resetProfile());
     setMode('standard');
     setReturningView('menu');
+    setResumeCode(null);
+    setFinishEntry(false);
     setStandardAutostart(false);
     setInstance((n) => n + 1);
   }
@@ -57,20 +63,23 @@ export default function App() {
     setMode(m);
     setReturningView('menu');
     setResumeCode(null);
+    setFinishEntry(false);
     setStandardAutostart(false);
     setInstance((n) => n + 1);
   }
 
-  // Scanned the seminar card's QR → continue into the full flow at home (PRD §5.2).
-  function continueFromResume() {
+  // Came in via the SMS link (auto-login) or the card's generic QR (entered ID) →
+  // continue into the full flow at home (PRD §5.2).
+  function continueFromResume(code: string) {
     const next = { ...profile, tier1: { ...profile.tier1, entryContext: 'shared_link' as const } };
-    commit(logEvent(next, 'resume_from_card', { code: resumeCode }));
+    commit(logEvent(next, 'resume_from_card', { code }));
     setMode('standard');
     setReturningView('menu');
     setResumeCode(null);
+    setFinishEntry(false);
     setStandardAutostart(true);
     setInstance((n) => n + 1);
-    window.history.replaceState({}, '', window.location.pathname); // drop ?resume so refresh won't relaunch
+    window.history.replaceState({}, '', window.location.pathname); // drop ?resume/?finish so refresh won't relaunch
   }
 
   return (
@@ -105,7 +114,9 @@ export default function App() {
       </div>
 
       {resumeCode ? (
-        <ResumeMode code={resumeCode} onContinue={continueFromResume} />
+        <ResumeMode variant="autologin" code={resumeCode} onContinue={continueFromResume} />
+      ) : finishEntry ? (
+        <ResumeMode variant="enterId" onContinue={continueFromResume} />
       ) : (
         <>
           {showSpine && <ReadinessMeter score={score} hint={spineHint} />}

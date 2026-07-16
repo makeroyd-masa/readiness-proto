@@ -40,6 +40,27 @@ export function UserBubble({ text }: { text: string }) {
   );
 }
 
+/** Hero value reveal — band-first, % secondary (PRD §8.2). Shared by Result + SeminarReveal. */
+export function Scorecard({ score }: { score: Score }) {
+  return (
+    <div className="scorecard">
+      <span className="mk">
+        <Mark />
+      </span>
+      <div className="kicker">Household readiness</div>
+      <div className="band">{score.band}</div>
+      <div className="pct">
+        {score.displayPct}% · {score.solidCount} of {score.dimensions.length} areas solid
+      </div>
+      <div className="barwrap">
+        <div className="bar">
+          <i style={{ width: `${score.displayPct}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** The readiness-meter spine (PRD §6.2 the spine). Band-first, % secondary. */
 export function ReadinessMeter({ score, hint }: { score: Score | null; hint?: string }) {
   const pct = score?.displayPct ?? 0;
