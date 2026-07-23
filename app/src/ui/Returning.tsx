@@ -18,16 +18,19 @@ import { getCodeSnapshot, setCodeStatus } from '../store/codeStore';
  * the same big-button style as the seminar kiosk.
  */
 
-// The representative lead whose phase-1 (non-medical) answers we assume.
+// The representative lead whose Tier-P (seminar) answers we assume — v3 fields.
 const PERSONA = (base: Profile): Profile => ({
   ...base,
   tier1: {
     ...base.tier1,
     householdType: 'couple',
+    agingParent: 'no',
     geoRisk: 'rural',
     role: null,
-    inventory: ['meds_record', 'contacts'],
+    contactsReadiness: 'documented', // has a written contact list
+    decisionMaker: 'informal', // someone in mind, not made official → legal-paperwork Q applies
     topWorry: 'cost',
+    inventory: ['meds_record'],
     entryContext: 'shared_link',
   },
 });
@@ -68,11 +71,11 @@ export function Returning() {
         profile={profile}
         commit={commit}
         track={track}
-        startId="q_vulnerability"
+        startId="q_authority"
         stopIds={['reveal']}
         onComplete={onPhase2Done}
         title="Finish your plan"
-        sub="Two last questions — these are private, just for your household's file."
+        sub="A few private questions — legal, medical, and financial — just for your household's file."
       />
     );
   }

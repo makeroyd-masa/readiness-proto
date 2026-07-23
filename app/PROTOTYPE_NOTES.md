@@ -1,7 +1,26 @@
-# SAM Household Readiness Check — Rebuild Prototype (v2)
+# SAM Household Readiness Check — Rebuild Prototype (v3)
 
-Internal, throwaway prototype built from scratch per **PRD Revision 2 §19**. It is not a
-port of the v1 HTML; it demonstrates the revised model on real, deterministic rails.
+Internal, throwaway prototype built from scratch per **PRD Revision 2 §19**, then expanded per
+**Revision 3** (`docs/SAM_Household_Readiness_Requirements_v3.docx`) from an emergency-response
+check into a broader **household-resilience** model. It demonstrates the revised model on real,
+deterministic rails.
+
+## What Revision 3 added
+
+- **Three sensitivity tiers (P / M / F)** — Tier P is shareable (seminar screen + agent view);
+  Tier M (advocacy, medications) and Tier F (financial runway) are home-only and never rendered
+  on shared/agent surfaces (`FIELD_TIER` in `domain/valueSets.ts`, enforced + tested).
+- **Expanded intake** — an aging-parent flag decoupled from household type (`caregiver` removed
+  as a composition); who-to-call and who-takes-charge promoted to three-level scenario
+  questions; new legal-paperwork, financial-runway, and long-term-care questions.
+- **Six scored dimensions** — People & roles gains a documented-vs-informal depth; **Financial
+  resilience** and **Long-term-care planning** added (LTC is the personalized fifth for
+  aging-parent / multigen households). Coverage still unscored.
+- **Anti-upsell discipline** — products appear only in optional, post-artifact education modules;
+  a build-time **product-neutrality scan** (`verify.ts` check 13, NF-10) fails on any product
+  term in a scored gap, step title, or question copy.
+- **Expanded artifact** — living file + PDF gain decision-authority, financial, and LTC sections
+  (wallet card stays lean); summary reframed "emergency card" → "household resilience plan".
 
 ## Run it
 

@@ -16,13 +16,14 @@ export const householdReadinessFlow: Flow = {
     welcome: {
       id: 'welcome',
       type: 'content',
-      say: "Let's find out how ready your household is if a medical emergency hit today — it takes about 5 minutes, and you'll leave with a plan you can actually use.\n\nFirst: who's in your household?",
+      say: "Let's build a readiness plan for your household — about 5 minutes, and you'll leave with something you can actually use.\n\nFirst, who are you building this plan for?",
       next: 'q_household',
     },
 
     // ========================================================================
-    // FIRST HALF — non-medical. Safe for the shared seminar screen (§5.2, §13):
-    // household framing, environment, current-state inventory, and top worry.
+    // TIER P — publicly shareable. Safe for the shared seminar screen (§5.2, §13):
+    // composition, aging-parent responsibility, the two highest-stakes scenarios,
+    // environment, inventory, worry, and the long-term-care conversation.
     // ========================================================================
 
     // Stage 1 — Household framing
@@ -30,36 +31,67 @@ export const householdReadinessFlow: Flow = {
       id: 'q_household',
       type: 'question',
       field: 'householdType',
-      say: "Who's in your household?",
+      say: 'Who are you building this plan for?',
       options: [
         { value: 'solo', label: 'Just me' },
         { value: 'couple', label: 'Me and my partner or spouse' },
         { value: 'kids', label: 'A family with kids at home' },
-        { value: 'multigen', label: 'Multi-generational — kids and an older parent' },
-        { value: 'caregiver', label: 'I help care for an aging parent' },
+        { value: 'multigen', label: 'Multiple generations under one roof' },
       ],
-      next: 'd_caregiver',
+      next: 'q_agingparent',
     },
-    d_caregiver: {
-      id: 'd_caregiver',
-      type: 'decision',
-      // Real branch on a real value — caregiver unlocks the role question.
-      route: (p) => (p.tier1.householdType === 'caregiver' ? 'q_role' : 'q_geo'),
+    // v3 (HR-V3-03): aging-parent responsibility, decoupled from household type.
+    q_agingparent: {
+      id: 'q_agingparent',
+      type: 'question',
+      field: 'agingParent',
+      say: 'Do you have parents or older loved ones whose care may fall to you?',
+      options: [
+        { value: 'yes', label: 'Yes — I help now or expect to' },
+        { value: 'no', label: 'No, not right now' },
+      ],
+      next: 'q_role',
     },
     q_role: {
       id: 'q_role',
       type: 'question',
       field: 'role',
-      when: (p) => p.tier1.householdType === 'caregiver',
+      when: (p) => p.tier1.agingParent === 'yes',
       say: 'Are you nearby, or coordinating from a distance?',
       options: [
         { value: 'caregiver_nearby', label: "I'm nearby — same town or a short drive" },
         { value: 'caregiver_remote', label: "I'm at a distance — different city or state" },
       ],
+      next: 'q_contacts',
+    },
+
+    // Stage 2 — Highest-stakes scenarios, promoted from the inventory checklist (Q2/Q3).
+    q_contacts: {
+      id: 'q_contacts',
+      type: 'question',
+      field: 'contactsReadiness',
+      say: 'If someone had a medical emergency tonight, does everyone know who to call first?',
+      options: [
+        { value: 'documented', label: "Yes — the key numbers are written where everyone can find them" },
+        { value: 'informal', label: 'Sort of — people know, but nothing is written down' },
+        { value: 'none', label: 'Not really' },
+      ],
+      next: 'q_takecharge',
+    },
+    q_takecharge: {
+      id: 'q_takecharge',
+      type: 'question',
+      field: 'decisionMaker',
+      say: "If you couldn't speak for yourself, is there one person who could take charge?",
+      options: [
+        { value: 'documented', label: "Yes — we've clearly agreed who" },
+        { value: 'informal', label: "Probably, but we've never made it official" },
+        { value: 'none', label: 'No one clearly' },
+      ],
       next: 'q_geo',
     },
 
-    // Stage 2 — Context & environmental risk
+    // Stage 3 — Context & environmental risk
     q_geo: {
       id: 'q_geo',
       type: 'question',
@@ -87,17 +119,16 @@ export const householdReadinessFlow: Flow = {
       next: 'q_inventory',
     },
 
-    // Stage 3 — Current-state inventory (drives the score; no coverage item, §18)
+    // Stage 4 — Current-state inventory (fast multi-select; contacts + decision-maker
+    // are now their own scenario questions, so they're removed here).
     q_inventory: {
       id: 'q_inventory',
       type: 'question',
       field: 'inventory',
       multi: true,
-      say: 'Which of these does your household already have in place? Pick any that apply — this is what sets your readiness score.',
+      say: 'Which of these does your household already have in place? Pick any that apply.',
       options: [
         { value: 'meds_record', label: "A current list of everyone's meds, allergies, and conditions" },
-        { value: 'contacts', label: 'An emergency contact list everyone can find' },
-        { value: 'decision_maker', label: "Someone able to make medical decisions if you can't" },
         { value: 'go_bag', label: 'A go-bag or several days of medication supply' },
         { value: 'written_plan', label: 'A written household plan everyone can find' },
         { value: 'none', label: 'Honestly… none of these yet', exclusive: true },
@@ -105,7 +136,7 @@ export const householdReadinessFlow: Flow = {
       next: 'q_worry',
     },
 
-    // Stage 4 — Worry / prioritization (last of the non-medical half)
+    // Stage 5 — Worry / prioritization
     q_worry: {
       id: 'q_worry',
       type: 'question',
@@ -118,25 +149,56 @@ export const householdReadinessFlow: Flow = {
         { value: 'distance', label: 'Being far from the right care when it happens' },
         { value: 'not_sure', label: "Not sure — that's kind of why I'm here" },
       ],
+      next: 'q_ltc',
+    },
+
+    // v3 (HR-V3-05): long-term-care conversation — Tier P, but only for households
+    // where it applies (aging-parent responsibility or multi-generational).
+    q_ltc: {
+      id: 'q_ltc',
+      type: 'question',
+      field: 'ltcConversation',
+      when: (p) => p.tier1.agingParent === 'yes' || p.tier1.householdType === 'multigen',
+      say: 'Has your family talked about long-term care — where, who would help, and how it would be handled?',
+      options: [
+        { value: 'documented', label: "Yes — we've talked it through and written down the plan" },
+        { value: 'informal', label: "We've talked about it, but nothing's written down" },
+        { value: 'none', label: 'Not yet' },
+      ],
       next: 'half_break',
     },
 
     // ========================================================================
-    // THE BREAK — end of the non-medical half. In the seminar this is where the
-    // shared-screen portion stops (reveal + finish-at-home). In the standard app
-    // it's just a one-line transition and the flow continues end-to-end.
+    // THE BREAK — end of the shareable (Tier P) half. In the seminar the shared
+    // screen stops here (reveal + finish-at-home). In the standard app it's a
+    // one-line transition and the flow continues end-to-end.
     // ========================================================================
     half_break: {
       id: 'half_break',
       type: 'content',
-      say: "That covers the readiness basics. The last two are more personal — about who can speak for your household and what a responder would need to know — so they're just for your private file.",
-      next: 'q_vulnerability',
+      say: "That covers the shareable basics. The rest is more personal — who can legally act for you, health details, and your household's financial cushion — so it's just for your private file.",
+      next: 'q_authority',
     },
 
     // ========================================================================
-    // SECOND HALF — medical / medical-adjacent. Completed at home, never on the
-    // shared seminar screen (§5.2, §13).
+    // TIER P (home half) + TIER M + TIER F — completed at home. Tiers M and F are
+    // never shown on the shared seminar screen (§5.2, §13, NF-09).
     // ========================================================================
+
+    // v3 (HR-V3-06): legal-authority depth — only when a decision-maker exists.
+    q_authority: {
+      id: 'q_authority',
+      type: 'question',
+      field: 'decisionAuthority',
+      when: (p) => p.tier1.decisionMaker != null && p.tier1.decisionMaker !== 'none',
+      say: 'Does that person have the legal paperwork to act for you — a healthcare proxy and a HIPAA release?',
+      options: [
+        { value: 'documented', label: 'Yes — the paperwork is signed' },
+        { value: 'partial', label: "We've started, but it's not finished" },
+        { value: 'none', label: 'No paperwork yet' },
+      ],
+      next: 'q_vulnerability',
+    },
     q_vulnerability: {
       id: 'q_vulnerability',
       type: 'question',
@@ -153,11 +215,25 @@ export const householdReadinessFlow: Flow = {
       id: 'q_medications',
       type: 'question',
       field: 'medicalNeeds',
-      say: 'Last one — the part that matters most to a first responder: medications, allergies, and conditions. Does anyone in your household have any they should know about?',
+      say: 'The part that matters most to a first responder: medications, allergies, and conditions. Does anyone in your household have any they should know about?',
       options: [
         { value: 'none', label: 'No daily meds, allergies, or conditions to note' },
         { value: 'documented', label: 'Yes — and we keep a current written list' },
         { value: 'undocumented', label: "Yes — but it's not written down anywhere yet" },
+      ],
+      next: 'q_financial',
+    },
+    // v3 (HR-V3-05): financial runway — Tier F, home only, never on the shared screen.
+    q_financial: {
+      id: 'q_financial',
+      type: 'question',
+      field: 'financialRunway',
+      say: 'If a health event kept a wage-earner out of work for three months, how long could your household cover its bills?',
+      options: [
+        { value: 'ample', label: 'Six months or more' },
+        { value: 'some', label: 'One to three months' },
+        { value: 'little', label: 'Less than a month' },
+        { value: 'unsure', label: "I'm not sure" },
       ],
       next: 'c_score',
     },

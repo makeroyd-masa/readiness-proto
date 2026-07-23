@@ -12,7 +12,7 @@
  * PASS, explicitly TUNABLE. They are not final product values (flagged to reviewers).
  */
 
-import { BANDS, type Band, type DimensionStatus, type ScoreDimensionId } from './valueSets';
+import { BANDS, levelStatus, type Band, type DimensionStatus, type ScoreDimensionId } from './valueSets';
 import { hasInventory, type Profile } from './profile';
 
 export interface ScoredDimension {
@@ -44,37 +44,49 @@ function highGeo(p: Profile): boolean {
   return p.tier1.geoRisk === 'disaster' || p.tier1.geoRisk === 'rural';
 }
 
+/** A contact list is findable / a decision-maker is named — read from the v3 scenario
+ *  fields (and the People & roles tool, which writes them). */
+function contactsDocumented(p: Profile): boolean {
+  return p.tier1.contactsReadiness === 'documented' || p.tier2.contacts.length > 0;
+}
+function decisionMakerNamed(p: Profile): boolean {
+  return (
+    p.tier1.decisionMaker === 'documented' ||
+    p.tier1.decisionMaker === 'informal' ||
+    Boolean(p.tier2.decisionMakerName) ||
+    p.tier2.decisionMakerStatus === 'yes'
+  );
+}
+
 /**
- * The personalized fifth dimension, chosen by household type (PRD §8.1, §19.5).
- * Each type's "good" condition is tied to inventory signals so a fully-prepared
- * household (any type) CAN reach the top band on its own preparation (§8.2) — the
- * fifth is not an unreachable ceiling.
+ * The personalized fifth dimension (PRD §8.1, §19.5).
+ * v3: aging-parent responsibility or a multi-generational household routes to
+ * Long-term-care planning (HR-V3-05); every other composition keeps a v2-style fifth.
+ * The `caregiver` composition case is gone (caregiving is now the aging-parent flag).
  */
 function personalizedFifth(p: Profile): ScoredDimension {
+  // Long-term-care planning becomes the fifth where it applies.
+  if (p.tier1.agingParent === 'yes' || p.tier1.householdType === 'multigen') {
+    const remote = p.tier1.agingParent === 'yes' && p.tier1.role === 'caregiver_remote';
+    const status = levelStatus(p.tier1.ltcConversation);
+    return {
+      id: 'long_term_care',
+      name: 'Long-term-care planning',
+      status,
+      weight: remote && status !== 'good' ? RAISED : BASE,
+    };
+  }
+
   const base = { id: 'personalized_fifth' as const, weight: BASE };
-  const has = (i: Parameters<typeof hasInventory>[1]) => hasInventory(p, i);
-  const documented = has('written_plan') || (has('contacts') && has('decision_maker'));
+  const documented = hasInventory(p, 'written_plan') || (contactsDocumented(p) && decisionMakerNamed(p));
   switch (p.tier1.householdType) {
-    case 'caregiver': {
-      // escalates when the caregiver is remote (role) — a real branch with a real value.
-      const remote = p.tier1.role === 'caregiver_remote';
-      const good = has('decision_maker'); // authorizations to coordinate care are lined up
-      return {
-        ...base,
-        name: 'Remote coordination access',
-        status: good ? 'good' : remote ? 'soon' : 'watch',
-        weight: remote && !good ? RAISED : BASE,
-      };
-    }
-    case 'multigen':
-      return { ...base, name: 'Roles across generations', status: documented ? 'good' : 'watch' };
     case 'kids':
-      return { ...base, name: "Kids' emergency instructions", status: has('contacts') || documented ? 'good' : 'watch' };
+      return { ...base, name: "Kids' emergency instructions", status: contactsDocumented(p) || documented ? 'good' : 'watch' };
     case 'couple':
-      return { ...base, name: 'Mutual backup (each can speak for the other)', status: has('decision_maker') ? 'good' : 'watch' };
+      return { ...base, name: 'Mutual backup (each can speak for the other)', status: decisionMakerNamed(p) ? 'good' : 'watch' };
     case 'solo':
     default: {
-      const good = has('contacts') || has('decision_maker'); // a trusted person can act
+      const good = contactsDocumented(p) || decisionMakerNamed(p); // a trusted person can act
       return {
         ...base,
         name: 'Solo emergency backup',
@@ -104,19 +116,20 @@ export function scoreProfile(p: Profile): Score {
     weight: hasVulnerability(p) || mn === 'undocumented' ? RAISED : BASE,
   });
 
-  // 2. People & roles — findable contacts + decision-maker named where relevant.
-  //    Satisfied by the seminar inventory OR by the People & roles tool's writes.
-  const contacts = hasInventory(p, 'contacts') || p.tier2.contacts.length > 0;
-  const dm =
-    hasInventory(p, 'decision_maker') ||
-    p.tier2.decisionMakerStatus === 'yes' ||
-    Boolean(p.tier2.decisionMakerName);
-  const dmNeeded = hasVulnerability(p) || p.tier1.householdType !== 'solo';
-  const peopleGood = contacts && (dm || !dmNeeded);
+  // 2. People & roles — v3 depth (HR-V3-06): findable contacts + a named decision-maker
+  //    WITH signed legal authority (proxy / HIPAA). Informal scores watch; a real gap
+  //    (no contacts or no decision-maker) scores soon.
+  const cr = p.tier1.contactsReadiness;
+  const dm = p.tier1.decisionMaker;
+  const auth = p.tier1.decisionAuthority;
+  const contactsGap = cr === 'none' && p.tier2.contacts.length === 0;
+  const dmGap = dm === 'none' && !decisionMakerNamed(p);
+  const authDocumented = auth === 'documented';
+  const peopleGood = contactsDocumented(p) && decisionMakerNamed(p) && authDocumented;
   dims.push({
     id: 'people_and_roles',
     name: 'People & roles',
-    status: peopleGood ? 'good' : contacts ? 'watch' : dmNeeded ? 'soon' : 'watch',
+    status: contactsGap || dmGap ? 'soon' : peopleGood ? 'good' : 'watch',
     weight: hasVulnerability(p) ? RAISED : BASE,
   });
 
@@ -137,7 +150,16 @@ export function scoreProfile(p: Profile): Score {
     weight: BASE,
   });
 
-  // 5. Personalized fifth.
+  // 5. Financial resilience — v3 (HR-V3-05). Scored on runway, never on products.
+  //    Null (not yet answered at home) → watch, so the seminar reveal isn't punitive.
+  dims.push({
+    id: 'financial_resilience',
+    name: 'Financial resilience',
+    status: levelStatus(p.tier1.financialRunway),
+    weight: BASE,
+  });
+
+  // 6. Personalized fifth (long-term-care planning where it applies).
   dims.push(personalizedFifth(p));
 
   const totalWeight = dims.reduce((a, d) => a + d.weight, 0);

@@ -14,14 +14,14 @@ export interface CandidateStep {
   title: string;
   desc: string;
   evidenceId?: string; // cited Ready.gov block (Mayo-ready slot)
-  seam?: 'coverage'; // optional route to the coverage education module
+  seam?: 'coverage' | 'financial'; // optional route to an education module (product only after the artifact)
   /** score contribution; higher = more relevant. Returns -Infinity to exclude. */
   rank: (p: Profile) => number;
 }
 
 const V = (p: Profile) => p.tier1.vulnerability != null && p.tier1.vulnerability !== 'none';
 
-const LIBRARY: CandidateStep[] = [
+export const LIBRARY: CandidateStep[] = [
   {
     id: 'emergency_card',
     title: 'Create an emergency medical card',
@@ -39,12 +39,27 @@ const LIBRARY: CandidateStep[] = [
   {
     id: 'decision_maker',
     title: 'Name who can make medical decisions',
-    desc: 'Decide — and document — who can speak for each adult if they cannot speak for themselves. "I\'m not sure" is a valid answer and creates this step.',
+    desc: 'Decide who can speak for each adult if they cannot speak for themselves — and make sure the household agrees on who it is.',
     evidenceId: 'ready_documents',
     rank: (p) => {
-      if (hasInventory(p, 'decision_maker') || p.tier2.decisionMakerStatus === 'yes' || p.tier2.decisionMakerName) return -Infinity;
+      const dm = p.tier1.decisionMaker;
+      const named = dm === 'documented' || dm === 'informal' || p.tier2.decisionMakerStatus === 'yes' || Boolean(p.tier2.decisionMakerName);
+      if (named) return -Infinity; // someone is named → depth handled by legal_paperwork
       const needed = V(p) || p.tier1.householdType !== 'solo';
-      return needed ? 3 + (V(p) ? 2 : 0) : 0.5;
+      return needed ? 3 + (V(p) ? 2 : 0) : 0.8;
+    },
+  },
+  {
+    id: 'legal_paperwork',
+    title: 'Complete a healthcare proxy and HIPAA release',
+    desc: 'Put the paperwork in place so the person you trust can actually speak to doctors and act for you in a crisis.',
+    evidenceId: 'ready_documents',
+    rank: (p) => {
+      const dm = p.tier1.decisionMaker;
+      const named = dm === 'documented' || dm === 'informal' || Boolean(p.tier2.decisionMakerName);
+      const auth = p.tier1.decisionAuthority;
+      if (!named || auth === 'documented') return -Infinity; // relevant once someone is named and paperwork isn't done
+      return 3 + (auth === 'partial' ? 0 : 1) + (V(p) ? 2 : 0);
     },
   },
   {
@@ -52,7 +67,11 @@ const LIBRARY: CandidateStep[] = [
     title: 'Build a shared emergency contact tree',
     desc: 'One list everyone can reach — who to call first, second, and who reaches whom.',
     evidenceId: 'ready_plan',
-    rank: (p) => (hasInventory(p, 'contacts') || p.tier2.contacts.length > 0 ? -Infinity : 2.5 + (p.tier1.topWorry === 'chaos' ? 2 : 0)),
+    rank: (p) => {
+      if (p.tier1.contactsReadiness === 'documented' || p.tier2.contacts.length > 0) return -Infinity;
+      const gap = p.tier1.contactsReadiness === 'none' ? 1 : 0;
+      return 2.5 + gap + (p.tier1.topWorry === 'chaos' ? 2 : 0);
+    },
   },
   {
     id: 'go_bag',
@@ -71,9 +90,9 @@ const LIBRARY: CandidateStep[] = [
     desc: 'Line up the authorizations you would need to talk to a hospital and coordinate care on a loved one\'s behalf — before a crisis, not during one.',
     evidenceId: 'ready_documents',
     rank: (p) => {
-      const remote = p.tier1.householdType === 'caregiver' && p.tier1.role === 'caregiver_remote';
-      const caregiver = p.tier1.householdType === 'caregiver';
-      return remote ? 4 : caregiver ? 2.5 : -Infinity;
+      const aging = p.tier1.agingParent === 'yes';
+      const remote = aging && p.tier1.role === 'caregiver_remote';
+      return remote ? 4 : aging ? 2.5 : -Infinity;
     },
   },
   {
@@ -82,6 +101,29 @@ const LIBRARY: CandidateStep[] = [
     desc: 'Put roles, contacts, and steps in one place everyone can find. SAM builds this for you as your Readiness File.',
     evidenceId: 'ready_plan',
     rank: (p) => (hasInventory(p, 'written_plan') ? -Infinity : 1.5 + (p.tier1.topWorry === 'chaos' ? 1 : 0)),
+  },
+  {
+    id: 'financial_cushion',
+    title: "Understand your household's financial cushion",
+    desc: 'See how long your household could keep up with bills if a health event kept an earner out of work — and simple ways to extend that runway.',
+    seam: 'financial',
+    rank: (p) => {
+      const r = p.tier1.financialRunway;
+      if (r === 'ample') return -Infinity;
+      return r === 'little' || r === 'unsure' ? 2.4 : r === 'some' ? 1.6 : 0.6;
+    },
+  },
+  {
+    id: 'ltc_conversation',
+    title: 'Have the long-term-care conversation',
+    desc: "Talk through where care would happen, who would help, and how you'd handle it — then write down what you decide. SAM gives you a simple guide to start.",
+    rank: (p) => {
+      const applies = p.tier1.agingParent === 'yes' || p.tier1.householdType === 'multigen';
+      if (!applies) return -Infinity;
+      const c = p.tier1.ltcConversation;
+      if (c === 'documented') return -Infinity;
+      return c === 'none' ? 2.6 : 1.6;
+    },
   },
   {
     id: 'med_supply',

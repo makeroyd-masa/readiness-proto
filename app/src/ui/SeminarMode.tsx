@@ -22,7 +22,6 @@ import { saveCodeSnapshot } from '../store/codeStore';
 const HOUSEHOLD_PHRASE: Record<string, string> = {
   solo: 'a one-person household',
   couple: 'a couple',
-  caregiver: 'caring for an aging parent',
   kids: 'a family with kids',
   multigen: 'a multi-generational household',
 };

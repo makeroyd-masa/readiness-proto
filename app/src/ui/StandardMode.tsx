@@ -233,7 +233,6 @@ const WHO: Record<string, string> = {
   couple: 'you and your partner',
   kids: 'your family',
   multigen: 'your multi-generational household',
-  caregiver: 'you and your parent',
 };
 
 function Building({ profile, onDone }: { profile: Profile; onDone: () => void }) {

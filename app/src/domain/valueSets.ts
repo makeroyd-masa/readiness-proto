@@ -13,8 +13,30 @@
 
 // ---- Tier 1: personalization facts (captured freely, no consent gate) ----
 
-export const HOUSEHOLD_TYPES = ['solo', 'couple', 'kids', 'multigen', 'caregiver'] as const;
+// v3: 'caregiver' removed — caregiving is now a separate aging-parent flag, not a
+// household composition (HR-V3-03). householdType is pure composition.
+export const HOUSEHOLD_TYPES = ['solo', 'couple', 'kids', 'multigen'] as const;
 export type HouseholdType = (typeof HOUSEHOLD_TYPES)[number];
+
+/** v3: aging-parent responsibility, decoupled from household type (HR-V3-03). */
+export const AGING_PARENT = ['yes', 'no'] as const;
+export type AgingParent = (typeof AGING_PARENT)[number];
+
+/**
+ * v3 three-level scenario answers (HR-V3-04) — map natively to good/watch/soon with
+ * no new scoring primitive. Used by the who-to-call, who-takes-charge, and LTC-
+ * conversation questions.
+ */
+export const SCENARIO_LEVELS = ['documented', 'informal', 'none'] as const;
+export type ScenarioLevel = (typeof SCENARIO_LEVELS)[number];
+
+/** v3 legal-authority depth (proxy / HIPAA) — documented / partial / none (HR-V3-06). */
+export const AUTHORITY_LEVELS = ['documented', 'partial', 'none'] as const;
+export type AuthorityLevel = (typeof AUTHORITY_LEVELS)[number];
+
+/** v3 financial runway (Tier F) — how long the household could cover bills (HR-V3-05). */
+export const RUNWAY_LEVELS = ['ample', 'some', 'little', 'unsure'] as const;
+export type RunwayLevel = (typeof RUNWAY_LEVELS)[number];
 
 /** Non-clinical: asks about advocacy ability, NOT diagnoses (PRD §7.1). */
 export const VULNERABILITIES = ['none', 'cannot_advocate', 'young_kids'] as const;
@@ -49,10 +71,10 @@ export type EntryContext = (typeof ENTRY_CONTEXTS)[number];
  * NOTE: v1's "coverage" inventory item is intentionally REMOVED (PRD §8, §18):
  * coverage is no longer a scored input.
  */
+// v3: 'contacts' and 'decision_maker' are promoted OUT of the inventory checklist into
+// their own three-level scenario questions (Q2/Q3). Inventory keeps the fast-capture rest.
 export const INVENTORY_ITEMS = [
   'meds_record',
-  'contacts',
-  'decision_maker',
   'go_bag',
   'written_plan',
 ] as const;
@@ -60,13 +82,20 @@ export type InventoryItem = (typeof INVENTORY_ITEMS)[number];
 
 // ---- Scoring ----
 
-/** Family-controlled dimensions only. Coverage is NOT here (PRD §8). */
+/**
+ * Family-controlled dimensions only. Coverage is NOT here (PRD §8).
+ * v3 adds `financial_resilience` (always) and `long_term_care` (the personalized fifth
+ * for aging-parent / multigen households; otherwise `personalized_fifth` is emitted).
+ * A given profile scores exactly 6 dimensions.
+ */
 export const SCORE_DIMENSIONS = [
   'emergency_information',
   'people_and_roles',
   'supplies',
   'written_plan',
+  'financial_resilience',
   'personalized_fifth',
+  'long_term_care',
 ] as const;
 export type ScoreDimensionId = (typeof SCORE_DIMENSIONS)[number];
 
@@ -90,7 +119,59 @@ export type Band = (typeof BANDS)[number];
 export const MODES = ['standard', 'seminar', 'returning', 'agent'] as const;
 export type Mode = (typeof MODES)[number];
 
+// ---- v3 sensitivity tiers (HR-V3-02, NF-09) ----
+
+/**
+ * P / M / F tier for every intake field. Tier P is publicly shareable (seminar screen +
+ * agent view); Tier M (medical) and Tier F (financial) are completed at home only and
+ * MUST NOT render on shared or agent-visible surfaces.
+ */
+export type Tier = 'P' | 'M' | 'F';
+export const FIELD_TIER: Record<string, Tier> = {
+  householdType: 'P',
+  agingParent: 'P',
+  role: 'P',
+  contactsReadiness: 'P',
+  decisionMaker: 'P',
+  decisionAuthority: 'P',
+  geoRisk: 'P',
+  inventory: 'P',
+  topWorry: 'P',
+  ltcConversation: 'P',
+  vulnerability: 'M',
+  medicalNeeds: 'M',
+  financialRunway: 'F',
+};
+
+/** True when a field is safe for the shared seminar screen / agent tablet (Tier P). */
+export function isPublicField(field: string): boolean {
+  return FIELD_TIER[field] === 'P';
+}
+
 // ---- helpers ----
+
+/**
+ * Map a three-level answer to a dimension status (HR-V3-04) — no new scoring primitive.
+ * documented/ample → good; informal/partial/some → watch; none/little/unsure → soon;
+ * null (not answered yet) → watch, so a seminar-only reveal isn't punitive.
+ */
+export function levelStatus(v: string | null | undefined): DimensionStatus {
+  switch (v) {
+    case 'documented':
+    case 'ample':
+      return 'good';
+    case 'informal':
+    case 'partial':
+    case 'some':
+      return 'watch';
+    case 'none':
+    case 'little':
+    case 'unsure':
+      return 'soon';
+    default:
+      return 'watch';
+  }
+}
 
 export function isMember<T extends readonly string[]>(set: T, v: unknown): v is T[number] {
   return typeof v === 'string' && (set as readonly string[]).includes(v);

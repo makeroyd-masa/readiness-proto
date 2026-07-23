@@ -4,7 +4,7 @@ import type { InventoryItem } from '../domain/valueSets';
 import { scoreProfile } from '../domain/scoring';
 import { nextSteps } from '../domain/steps';
 import { getEvidence } from '../content/evidence';
-import { printHouseholdPlan } from './print';
+import { printHouseholdPlan, printLtcGuide } from './print';
 
 /**
  * The three actionable summary tools (docs/Updated experience.txt "Follow-on"):
@@ -37,6 +37,7 @@ export function PeopleRolesTool({ profile, commit, track, onClose }: ToolProps) 
   );
   const [decisionMaker, setDecisionMaker] = useState<string>(profile.tier2.decisionMakerName ?? '');
   const [notSure, setNotSure] = useState<boolean>(profile.tier2.decisionMakerStatus === 'not_sure');
+  const [proxySigned, setProxySigned] = useState<boolean>(profile.tier1.decisionAuthority === 'documented');
 
   const named = rows.map((r) => r.name.trim()).filter(Boolean);
 
@@ -56,7 +57,13 @@ export function PeopleRolesTool({ profile, commit, track, onClose }: ToolProps) 
     const dm = notSure ? '' : decisionMaker;
     const next: Profile = {
       ...profile,
-      tier1: { ...profile.tier1, inventory: withInventory(profile, ...(clean.length ? (['contacts'] as InventoryItem[]) : []), ...(dm ? (['decision_maker'] as InventoryItem[]) : [])) },
+      // v3: the tool writes the scenario/authority fields the score reads (HR-V3-06).
+      tier1: {
+        ...profile.tier1,
+        contactsReadiness: clean.length ? 'documented' : profile.tier1.contactsReadiness,
+        decisionMaker: dm ? 'documented' : notSure ? 'informal' : profile.tier1.decisionMaker,
+        decisionAuthority: dm ? (proxySigned ? 'documented' : profile.tier1.decisionAuthority ?? 'none') : profile.tier1.decisionAuthority,
+      },
       tier2: {
         ...profile.tier2,
         contacts: clean,
@@ -66,7 +73,7 @@ export function PeopleRolesTool({ profile, commit, track, onClose }: ToolProps) 
       },
     };
     commit(next);
-    track('tool_saved', { tool: 'people_roles', contacts: clean.length, decisionMaker: Boolean(dm) });
+    track('tool_saved', { tool: 'people_roles', contacts: clean.length, decisionMaker: Boolean(dm), proxySigned });
     onClose();
   }
 
@@ -99,6 +106,13 @@ export function PeopleRolesTool({ profile, commit, track, onClose }: ToolProps) 
         </label>
       </div>
       {named.length === 0 && <div className="tool-hint">Add a contact above to choose them as your decision-maker.</div>}
+
+      {!notSure && decisionMaker && (
+        <label className={`checkitem ${proxySigned ? 'on' : ''}`} style={{ marginTop: 12 }}>
+          <input type="checkbox" checked={proxySigned} onChange={() => setProxySigned((v) => !v)} />
+          <span>{decisionMaker} has signed the legal paperwork (healthcare proxy + HIPAA release)</span>
+        </label>
+      )}
 
       <div className="row" style={{ marginTop: 16 }}>
         <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
@@ -213,6 +227,47 @@ export function HouseholdPlanTool({ profile, commit, track, onClose }: ToolProps
       <div className="row" style={{ marginTop: 16 }}>
         <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
         <button className="btn btn-primary" onClick={generate}>Generate &amp; print plan</button>
+      </div>
+    </ToolShell>
+  );
+}
+
+/* ------------------------------------------------------- Long-term-care guide */
+
+export function LtcGuideTool({ profile, commit, track, onClose }: ToolProps) {
+  const topics = [
+    'Where would care happen — at home, with family, or somewhere else?',
+    'Who would coordinate day-to-day, and who is the backup?',
+    'What matters most to the person receiving care?',
+    "How would decisions get made if they couldn't speak for themselves?",
+    'What would it take to handle the costs, and who should be part of that plan?',
+  ];
+  function printGuide() {
+    printLtcGuide(profile);
+    track('artifact_delivered', { form: 'ltc_guide' });
+  }
+  function markDiscussed() {
+    commit({
+      ...profile,
+      tier1: { ...profile.tier1, ltcConversation: profile.tier1.ltcConversation === 'documented' ? 'documented' : 'informal' },
+    });
+    track('tool_saved', { tool: 'ltc' });
+    onClose();
+  }
+  return (
+    <ToolShell title="Long-term-care conversation" onClose={onClose}>
+      <p className="tool-intro">A short, non-clinical guide to start the conversation with the people it affects. Print it, talk it through, and write down what you decide.</p>
+      <div className="planlist">
+        {topics.map((t) => (
+          <div className="planitem" key={t}>
+            <span className="pk">•</span>
+            <span>{t}</span>
+          </div>
+        ))}
+      </div>
+      <div className="row" style={{ marginTop: 16 }}>
+        <button className="btn btn-ghost" onClick={markDiscussed}>We've had this talk</button>
+        <button className="btn btn-primary" onClick={printGuide}>Print the guide</button>
       </div>
     </ToolShell>
   );

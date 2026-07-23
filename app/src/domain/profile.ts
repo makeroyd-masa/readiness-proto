@@ -10,6 +10,8 @@
  */
 
 import type {
+  AgingParent,
+  AuthorityLevel,
   EntryContext,
   GeoRisk,
   HouseholdType,
@@ -17,19 +19,33 @@ import type {
   MedicalNeed,
   MemberStatus,
   Role,
+  RunwayLevel,
+  ScenarioLevel,
   TopWorry,
   Vulnerability,
 } from './valueSets';
 
-/** Tier 1 — personalization facts. */
+/** Tier 1 — personalization facts. (v3 adds resilience + tier-P scenario fields.) */
 export interface Tier1 {
   householdType: HouseholdType | null;
+  /** v3: aging-parent responsibility, decoupled from household type (HR-V3-03). */
+  agingParent: AgingParent | null;
   vulnerability: Vulnerability | null;
   /** Medical-half signal (2nd half, at home): meds/allergies/conditions present + documented. */
   medicalNeeds: MedicalNeed | null;
   geoRisk: GeoRisk | null;
   role: Role | null;
   topWorry: TopWorry | null;
+  /** v3 Q2 (Tier P): does everyone know who to call first? */
+  contactsReadiness: ScenarioLevel | null;
+  /** v3 Q3 (Tier P): is there one person who could take charge? */
+  decisionMaker: ScenarioLevel | null;
+  /** v3 Q4 (Tier P, home half): legal paperwork to act (proxy / HIPAA). */
+  decisionAuthority: AuthorityLevel | null;
+  /** v3 Q11 (Tier P): has the household talked about long-term care? */
+  ltcConversation: ScenarioLevel | null;
+  /** v3 Q10 (Tier F, home only): financial runway if a wage-earner is out 3 months. */
+  financialRunway: RunwayLevel | null;
   memberStatus: MemberStatus; // defaults to 'unknown'
   entryContext: EntryContext; // defaults to 'organic'
   inventory: InventoryItem[]; // Stage 3 current-state, drives score
@@ -93,7 +109,7 @@ export interface Profile {
   schemaVersion: number;
 }
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export function emptyProfile(sessionId: string, now: string): Profile {
   return {
@@ -102,11 +118,17 @@ export function emptyProfile(sessionId: string, now: string): Profile {
     updatedAt: now,
     tier1: {
       householdType: null,
+      agingParent: null,
       vulnerability: null,
       medicalNeeds: null,
       geoRisk: null,
       role: null,
       topWorry: null,
+      contactsReadiness: null,
+      decisionMaker: null,
+      decisionAuthority: null,
+      ltcConversation: null,
+      financialRunway: null,
       memberStatus: 'unknown',
       entryContext: 'organic',
       inventory: [],

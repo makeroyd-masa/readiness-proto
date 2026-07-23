@@ -14,22 +14,32 @@
 
 import type { Flow } from '../domain/nodes';
 import {
+  AGING_PARENT,
+  AUTHORITY_LEVELS,
   GEO_RISKS,
   HOUSEHOLD_TYPES,
   INVENTORY_ITEMS,
   MEDICAL_NEEDS,
   ROLES,
+  RUNWAY_LEVELS,
+  SCENARIO_LEVELS,
   TOP_WORRIES,
   VULNERABILITIES,
 } from '../domain/valueSets';
 
 const FIELD_VALUE_SETS: Record<string, readonly string[]> = {
   householdType: HOUSEHOLD_TYPES,
+  agingParent: AGING_PARENT,
   vulnerability: VULNERABILITIES,
   medicalNeeds: MEDICAL_NEEDS,
   geoRisk: GEO_RISKS,
   role: ROLES,
   topWorry: TOP_WORRIES,
+  contactsReadiness: SCENARIO_LEVELS,
+  decisionMaker: SCENARIO_LEVELS,
+  decisionAuthority: AUTHORITY_LEVELS,
+  ltcConversation: SCENARIO_LEVELS,
+  financialRunway: RUNWAY_LEVELS,
   inventory: INVENTORY_ITEMS,
 };
 

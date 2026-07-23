@@ -6,19 +6,21 @@ import { getEvidence } from '../content/evidence';
 import { coverageCopy, COVERAGE_QUESTIONS, MASA_STATS } from '../content/coverage';
 import { Mark, SamBubble, Scorecard } from './common';
 import { printFullFile, printWalletCard } from './print';
-import { GoBagTool, HouseholdPlanTool, PeopleRolesTool } from './Tools';
+import { GoBagTool, HouseholdPlanTool, LtcGuideTool, PeopleRolesTool } from './Tools';
 import { setCodeStatus } from '../store/codeStore';
 
-type ToolKey = 'people' | 'gobag' | 'plan';
+type ToolKey = 'people' | 'gobag' | 'plan' | 'ltc';
 
 /** Which action a next-step card opens; null = no in-app tool (evidence link only). */
 const STEP_TOOL: Record<string, ToolKey | 'details'> = {
   emergency_card: 'details',
   contact_tree: 'people',
   decision_maker: 'people',
+  legal_paperwork: 'people',
   go_bag: 'gobag',
   med_supply: 'gobag',
   written_plan: 'plan',
+  ltc_conversation: 'ltc',
 };
 
 interface Props {
@@ -44,6 +46,7 @@ export function Result({ profile, commit, track }: Props) {
   const score = scoreProfile(profile);
   const steps = nextSteps(profile);
   const [coverageOpen, setCoverageOpen] = useState(false);
+  const [financialOpen, setFinancialOpen] = useState(false);
   const [consentOpen, setConsentOpen] = useState(false);
   const [openTool, setOpenTool] = useState<ToolKey | null>(null);
   const [appPrompted, setAppPrompted] = useState(false);
@@ -62,6 +65,15 @@ export function Result({ profile, commit, track }: Props) {
       setCoverageOpen(true);
       track('coverage_viewed', { variant: profile.tier1.memberStatus });
       commit({ ...profile, coverageViewed: true });
+    }
+  }
+
+  function openSeam(seam: 'coverage' | 'financial') {
+    if (seam === 'financial') {
+      setFinancialOpen(true);
+      track('financial_module_viewed');
+    } else {
+      openCoverage();
     }
   }
 
@@ -94,14 +106,14 @@ export function Result({ profile, commit, track }: Props) {
   return (
     <>
       <SamBubble>
-        Here's where your household stands. {BAND_OPENER[score.band]}
+        Here's your household resilience plan. {BAND_OPENER[score.band]}
       </SamBubble>
 
       {/* Scorecard — band first, % secondary (PRD §8.2) */}
       <Scorecard score={score} />
 
       {/* Dimensions — coverage is deliberately NOT here (PRD §8) */}
-      <div className="section-h">Your readiness, area by area</div>
+      <div className="section-h">Your resilience, area by area</div>
       {score.dimensions.map((d) => {
         const m = STATUS_META[d.status];
         return (
@@ -116,7 +128,7 @@ export function Result({ profile, commit, track }: Props) {
       {/* Top 3 next steps */}
       <div className="section-h">Your top 3 next steps</div>
       {steps.map((s, i) => (
-        <StepCard key={s.id} step={s} index={i} onCoverage={openCoverage} onAction={stepActionFor(s.id)} />
+        <StepCard key={s.id} step={s} index={i} onSeam={openSeam} onAction={stepActionFor(s.id)} />
       ))}
 
       {/* Take action now — the three actionable tools (docs/Updated experience.txt) */}
@@ -132,6 +144,11 @@ export function Result({ profile, commit, track }: Props) {
           <span className="tctitle">Go-bag + med supply</span>
           <span className="tcdesc">Check off what's ready to grab in an emergency.</span>
         </button>
+        <button className="toolcard" onClick={() => setOpenTool('ltc')}>
+          <span className="tcicon">🗣️</span>
+          <span className="tctitle">Long-term-care talk</span>
+          <span className="tcdesc">A simple guide to start the conversation and write down what you decide.</span>
+        </button>
         <button className="toolcard" onClick={() => setOpenTool('plan')}>
           <span className="tcicon">📋</span>
           <span className="tctitle">Holistic plan</span>
@@ -140,7 +157,9 @@ export function Result({ profile, commit, track }: Props) {
       </div>
       {openTool === 'people' && <PeopleRolesTool profile={profile} commit={commit} track={track} onClose={() => setOpenTool(null)} />}
       {openTool === 'gobag' && <GoBagTool profile={profile} commit={commit} track={track} onClose={() => setOpenTool(null)} />}
+      {openTool === 'ltc' && <LtcGuideTool profile={profile} commit={commit} track={track} onClose={() => setOpenTool(null)} />}
       {openTool === 'plan' && <HouseholdPlanTool profile={profile} commit={commit} track={track} onClose={() => setOpenTool(null)} />}
+      {financialOpen && <FinancialModule profile={profile} track={track} />}
 
       {/* Artifact — ungated (PRD §4 / HR-I-05) */}
       <div className="section-h">The file SAM made for you</div>
@@ -237,17 +256,17 @@ function Chip({ id, done, icon, label, onClick }: { id: string; done: Set<string
   );
 }
 
-function StepCard({ step, index, onCoverage, onAction }: { step: RankedStep; index: number; onCoverage: () => void; onAction?: () => void }) {
+function StepCard({ step, index, onSeam, onAction }: { step: RankedStep; index: number; onSeam: (s: 'coverage' | 'financial') => void; onAction?: () => void }) {
   const ev = getEvidence(step.evidenceId);
-  const isCoverage = step.seam === 'coverage';
+  const isModule = step.seam === 'coverage' || step.seam === 'financial';
   return (
-    <div className={`step ${isCoverage ? 'optional' : ''}`}>
-      <div className="num">STEP {index + 1}{isCoverage ? ' · optional' : ''}</div>
+    <div className={`step ${isModule ? 'optional' : ''}`}>
+      <div className="num">STEP {index + 1}{isModule ? ' · optional' : ''}</div>
       <div className="st">{step.title}</div>
       <div className="sd">{step.desc}</div>
       <div className="steprow">
-        {isCoverage ? (
-          <span className="steplink" onClick={onCoverage}>
+        {isModule ? (
+          <span className="steplink" onClick={() => onSeam(step.seam as 'coverage' | 'financial')}>
             See the questions to ask →
           </span>
         ) : (
@@ -290,12 +309,16 @@ function ArtifactCard({
   const contactsSummary = t2.contacts.length
     ? t2.contacts.map((c) => `${c.name}${c.phone ? ` · ${c.phone}` : ''}`).join('; ')
     : t2.emergencyContact;
+  const t1 = profile.tier1;
+  const AUTH: Record<string, string> = { documented: 'Proxy + HIPAA signed', partial: 'Started', none: 'Not yet' };
+  const RUNWAY: Record<string, string> = { ample: '6+ months', some: '1–3 months', little: 'Under a month', unsure: 'Not sure' };
+  const LTC: Record<string, string> = { documented: 'Discussed & written down', informal: 'Discussed', none: 'Not yet' };
   return (
     <>
       <div className="artifact">
         <div className="ahead">
           <Mark />
-          <span className="at">Living Readiness File</span>
+          <span className="at">Living Resilience File</span>
         </div>
         <div className="abody">
           {row('Name / label', t2.householdLabel)}
@@ -303,6 +326,9 @@ function ArtifactCard({
           {row('Allergies / conditions', t2.allergiesConditions)}
           {row('Emergency contacts', contactsSummary)}
           {row('Decision-maker', t2.decisionMakerName)}
+          {row('Legal authority', t1.decisionAuthority ? AUTH[t1.decisionAuthority] : null)}
+          {row('Financial cushion', t1.financialRunway ? RUNWAY[t1.financialRunway] : null)}
+          {(t1.agingParent === 'yes' || t1.householdType === 'multigen') && row('Long-term care', t1.ltcConversation ? LTC[t1.ltcConversation] : null)}
         </div>
       </div>
       <div className="artifact-actions">
@@ -360,6 +386,49 @@ function CoverageModule({ profile, track }: { profile: Profile; track: (t: strin
           <p>MASA covers approved emergency ground and air transport — one predictable membership, no network limits.</p>
           <button className="btn btn-primary btn-block" onClick={() => { track('coverage_cta_click'); alert('Prototype: routes to coverage check / plan comparison / seminar registration.'); }}>
             Check my coverage options →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Financial-cushion education module (v3, HR-V3-07 / §6.3). Education-first: it explains
+ * runway and low-cost ways to extend it. Any product connection appears ONLY here, after
+ * the free artifact exists and the user chose to open this — never as a scored gap or a
+ * step title.
+ */
+function FinancialModule({ profile, track }: { profile: Profile; track: (t: string, d?: Record<string, unknown>) => void }) {
+  const [offerOpen, setOfferOpen] = useState(false);
+  const runway = profile.tier1.financialRunway;
+  const readout: Record<string, string> = {
+    ample: 'You told us six months or more — a strong cushion. Keep it topped up.',
+    some: 'You told us one to three months — a real start, worth extending.',
+    little: 'You told us less than a month — the highest-impact area to shore up.',
+    unsure: "You weren't sure — knowing the number is the first step.",
+  };
+  return (
+    <div className="alert" style={{ marginTop: 8 }}>
+      <div className="ah">Your household's financial cushion</div>
+      <p style={{ fontSize: 13, lineHeight: 1.5, color: '#444', marginBottom: 6 }}>
+        {runway ? readout[runway] : 'A cushion is how long your household could keep up with bills if a health event kept an earner out of work.'}
+      </p>
+      <ul>
+        <li>Estimate three months of essential bills — housing, food, utilities, minimum payments.</li>
+        <li>Note what's already set aside, and where a gap would open.</li>
+        <li>Decide one small, automatic step to extend the runway this quarter.</li>
+      </ul>
+      {!offerOpen ? (
+        <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={() => { setOfferOpen(true); track('financial_offer_shown'); }}>
+          See how a MASA advocate can help
+        </button>
+      ) : (
+        <div className="ctaband">
+          <h3>Talk it through with an advocate</h3>
+          <p>An advocate can walk through your cushion with you and, only if it fits, the options that protect income during a health event.</p>
+          <button className="btn btn-primary btn-block" onClick={() => { track('financial_cta_click'); alert('Prototype: routes to a MASA advocate / inside-sales conversation, with your plan as context.'); }}>
+            Connect me with an advocate →
           </button>
         </div>
       )}

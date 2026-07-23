@@ -20,13 +20,18 @@ const HOUSEHOLD: Record<string, string> = {
   couple: 'Couple / partners',
   kids: 'Family with kids',
   multigen: 'Multi-generational',
-  caregiver: 'Cares for an aging parent',
 };
 const ROLE: Record<string, string> = {
   caregiver_nearby: 'Nearby caregiver',
   caregiver_remote: 'Remote caregiver',
   patient: 'Patient',
 };
+const SCENARIO: Record<string, string> = {
+  documented: 'Yes — documented',
+  informal: 'Informal / partial',
+  none: 'Not yet',
+};
+const YESNO: Record<string, string> = { yes: 'Yes', no: 'No' };
 const GEO: Record<string, string> = {
   disaster: 'Disaster-prone area',
   rural: 'Rural / far from a hospital',
@@ -42,8 +47,6 @@ const WORRY: Record<string, string> = {
 };
 const INVENTORY: Record<string, string> = {
   meds_record: 'Meds/allergies list',
-  contacts: 'Emergency contacts',
-  decision_maker: 'Decision-maker',
   go_bag: 'Go-bag / med supply',
   written_plan: 'Written plan',
 };
@@ -138,12 +141,17 @@ export function AgentMode() {
 
 function AnswerRows({ tier1 }: { tier1: Tier1 }) {
   const inv = tier1.inventory.length ? tier1.inventory.map((i) => INVENTORY[i] ?? i).join(', ') : 'None in place yet';
+  // Tier P only — medical (advocacy, medications) and financial (runway) stay private (NF-09).
   const rows: [string, string][] = [
     ['Household', tier1.householdType ? HOUSEHOLD[tier1.householdType] : '—'],
+    ['Cares for an aging parent', tier1.agingParent ? YESNO[tier1.agingParent] : '—'],
     ...(tier1.role ? ([['Caregiver role', ROLE[tier1.role] ?? tier1.role]] as [string, string][]) : []),
+    ['Knows who to call first', tier1.contactsReadiness ? SCENARIO[tier1.contactsReadiness] : '—'],
+    ['Someone to take charge', tier1.decisionMaker ? SCENARIO[tier1.decisionMaker] : '—'],
     ['Location', tier1.geoRisk ? GEO[tier1.geoRisk] : '—'],
     ['Already in place', inv],
     ['Most worried about', tier1.topWorry ? WORRY[tier1.topWorry] : '—'],
+    ...(tier1.ltcConversation ? ([['Long-term-care talk', SCENARIO[tier1.ltcConversation]]] as [string, string][]) : []),
   ];
   return (
     <div className="answerrows">
@@ -153,7 +161,7 @@ function AnswerRows({ tier1 }: { tier1: Tier1 }) {
           <span className="av">{v}</span>
         </div>
       ))}
-      <div className="adnote">Note: medications and advocacy questions are private — the lead answers those at home, not here.</div>
+      <div className="adnote">Private (not shown here): advocacy, medications, and financial answers — the lead completes those at home.</div>
     </div>
   );
 }
