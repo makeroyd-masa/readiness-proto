@@ -17,6 +17,7 @@ import {
   GEO_RISKS,
   HOUSEHOLD_TYPES,
   INVENTORY_ITEMS,
+  MEDICAL_NEEDS,
   ROLES,
   TOP_WORRIES,
   VULNERABILITIES,
@@ -25,6 +26,7 @@ import {
 const FIELD_VALUE_SETS: Record<string, readonly string[]> = {
   householdType: HOUSEHOLD_TYPES,
   vulnerability: VULNERABILITIES,
+  medicalNeeds: MEDICAL_NEEDS,
   geoRisk: GEO_RISKS,
   role: ROLES,
   topWorry: TOP_WORRIES,

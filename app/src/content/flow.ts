@@ -20,6 +20,11 @@ export const householdReadinessFlow: Flow = {
       next: 'q_household',
     },
 
+    // ========================================================================
+    // FIRST HALF — non-medical. Safe for the shared seminar screen (§5.2, §13):
+    // household framing, environment, current-state inventory, and top worry.
+    // ========================================================================
+
     // Stage 1 — Household framing
     q_household: {
       id: 'q_household',
@@ -39,7 +44,7 @@ export const householdReadinessFlow: Flow = {
       id: 'd_caregiver',
       type: 'decision',
       // Real branch on a real value — caregiver unlocks the role question.
-      route: (p) => (p.tier1.householdType === 'caregiver' ? 'q_role' : 'q_vulnerability'),
+      route: (p) => (p.tier1.householdType === 'caregiver' ? 'q_role' : 'q_geo'),
     },
     q_role: {
       id: 'q_role',
@@ -50,18 +55,6 @@ export const householdReadinessFlow: Flow = {
       options: [
         { value: 'caregiver_nearby', label: "I'm nearby — same town or a short drive" },
         { value: 'caregiver_remote', label: "I'm at a distance — different city or state" },
-      ],
-      next: 'q_vulnerability',
-    },
-    q_vulnerability: {
-      id: 'q_vulnerability',
-      type: 'question',
-      field: 'vulnerability',
-      say: 'In an emergency, would anyone in your household have trouble speaking or advocating for themselves?',
-      options: [
-        { value: 'none', label: "No — everyone can speak for themselves" },
-        { value: 'cannot_advocate', label: 'Yes — someone might not be able to advocate for themselves' },
-        { value: 'young_kids', label: "Yes — young kids who couldn't advocate for themselves" },
       ],
       next: 'q_geo',
     },
@@ -112,18 +105,59 @@ export const householdReadinessFlow: Flow = {
       next: 'q_worry',
     },
 
-    // Stage 4 — Worry / prioritization
+    // Stage 4 — Worry / prioritization (last of the non-medical half)
     q_worry: {
       id: 'q_worry',
       type: 'question',
       field: 'topWorry',
-      say: 'Last one. When you picture an emergency, what worries you most?',
+      say: 'When you picture an emergency, what worries you most?',
       options: [
         { value: 'info', label: "No one would have the right info if someone couldn't speak" },
         { value: 'chaos', label: "We'd panic or get separated and not know what to do" },
         { value: 'cost', label: 'The cost — ambulance, hospital, transport' },
         { value: 'distance', label: 'Being far from the right care when it happens' },
         { value: 'not_sure', label: "Not sure — that's kind of why I'm here" },
+      ],
+      next: 'half_break',
+    },
+
+    // ========================================================================
+    // THE BREAK — end of the non-medical half. In the seminar this is where the
+    // shared-screen portion stops (reveal + finish-at-home). In the standard app
+    // it's just a one-line transition and the flow continues end-to-end.
+    // ========================================================================
+    half_break: {
+      id: 'half_break',
+      type: 'content',
+      say: "That covers the readiness basics. The last two are more personal — about who can speak for your household and what a responder would need to know — so they're just for your private file.",
+      next: 'q_vulnerability',
+    },
+
+    // ========================================================================
+    // SECOND HALF — medical / medical-adjacent. Completed at home, never on the
+    // shared seminar screen (§5.2, §13).
+    // ========================================================================
+    q_vulnerability: {
+      id: 'q_vulnerability',
+      type: 'question',
+      field: 'vulnerability',
+      say: 'In an emergency, would anyone in your household have trouble speaking or advocating for themselves?',
+      options: [
+        { value: 'none', label: "No — everyone can speak for themselves" },
+        { value: 'cannot_advocate', label: 'Yes — someone might not be able to advocate for themselves' },
+        { value: 'young_kids', label: "Yes — young kids who couldn't advocate for themselves" },
+      ],
+      next: 'q_medications',
+    },
+    q_medications: {
+      id: 'q_medications',
+      type: 'question',
+      field: 'medicalNeeds',
+      say: 'Last one — the part that matters most to a first responder: medications, allergies, and conditions. Does anyone in your household have any they should know about?',
+      options: [
+        { value: 'none', label: 'No daily meds, allergies, or conditions to note' },
+        { value: 'documented', label: 'Yes — and we keep a current written list' },
+        { value: 'undocumented', label: "Yes — but it's not written down anywhere yet" },
       ],
       next: 'c_score',
     },

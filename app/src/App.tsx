@@ -5,6 +5,7 @@ import { hasIntake } from './domain/profile';
 import type { MemberStatus, Mode } from './domain/valueSets';
 import { scoreProfile } from './domain/scoring';
 import { loadProfile, logEvent, resetProfile, saveProfile } from './store/profileStore';
+import { getCodeSnapshot } from './store/codeStore';
 import { assertFlowIntegrity } from './engine/guards';
 import { householdReadinessFlow } from './content/flow';
 import { ReadinessMeter } from './ui/common';
@@ -12,6 +13,7 @@ import { StandardMode } from './ui/StandardMode';
 import { SeminarMode } from './ui/SeminarMode';
 import { ReturningMode } from './ui/ReturningMode';
 import { ResumeMode } from './ui/ResumeMode';
+import { AgentMode } from './ui/AgentMode';
 import { Result } from './ui/Result';
 
 // Read the seminar-loop entry params once at load:
@@ -33,12 +35,13 @@ export default function App() {
   const [resumeCode, setResumeCode] = useState<string | null>(initialResumeCode);
   const [finishEntry, setFinishEntry] = useState(initialFinish);
   const [standardAutostart, setStandardAutostart] = useState(false);
+  const [startAtId, setStartAtId] = useState<string | undefined>(undefined);
 
   const commit = (next: Profile) => setProfile(saveProfile(next));
   const track = (type: string, detail?: Record<string, unknown>) => setProfile(logEvent(profile, type, detail));
 
   const score = useMemo(() => scoreProfile(profile), [profile]);
-  const showSpine = mode !== 'seminar' && hasIntake(profile);
+  const showSpine = mode !== 'seminar' && mode !== 'agent' && hasIntake(profile);
   const spineHint = profile.checkinSet
     ? 'Check-in on: SAM will refresh this every 6 months.'
     : score.displayPct < 92
@@ -56,6 +59,7 @@ export default function App() {
     setResumeCode(null);
     setFinishEntry(false);
     setStandardAutostart(false);
+    setStartAtId(undefined);
     setInstance((n) => n + 1);
   }
 
@@ -65,19 +69,27 @@ export default function App() {
     setResumeCode(null);
     setFinishEntry(false);
     setStandardAutostart(false);
+    setStartAtId(undefined);
     setInstance((n) => n + 1);
   }
 
-  // Came in via the SMS link (auto-login) or the card's generic QR (entered ID) →
-  // continue into the full flow at home (PRD §5.2).
+  // Came in via the SMS link (auto-login) or the card's generic QR (entered ID).
+  // The code carries the seminar 1st-half answers (store/codeStore.ts): restore them
+  // and resume at the MEDICAL 2nd half. If the code isn't found (e.g. a fresh device
+  // with no local record), fall back to the full flow from the top (PRD §5.2).
   function continueFromResume(code: string) {
-    const next = { ...profile, tier1: { ...profile.tier1, entryContext: 'shared_link' as const } };
-    commit(logEvent(next, 'resume_from_card', { code }));
+    const rec = getCodeSnapshot(code);
+    const restoredTier1 = rec
+      ? { ...rec.tier1, entryContext: 'shared_link' as const }
+      : { ...profile.tier1, entryContext: 'shared_link' as const };
+    const next: Profile = { ...profile, tier1: restoredTier1, activeCode: rec ? rec.code : null };
+    commit(logEvent(next, 'resume_from_card', { code, found: Boolean(rec) }));
     setMode('standard');
     setReturningView('menu');
     setResumeCode(null);
     setFinishEntry(false);
     setStandardAutostart(true);
+    setStartAtId(rec ? 'q_vulnerability' : undefined); // resume at the medical half when we have the 1st
     setInstance((n) => n + 1);
     window.history.replaceState({}, '', window.location.pathname); // drop ?resume/?finish so refresh won't relaunch
   }
@@ -96,7 +108,7 @@ export default function App() {
       {/* Dev/demo controls (not part of the product surface) */}
       <div className="devbar no-print">
         <span className="dl">Mode</span>
-        {(['standard', 'seminar', 'returning'] as Mode[]).map((m) => (
+        {(['standard', 'seminar', 'returning', 'agent'] as Mode[]).map((m) => (
           <button key={m} className={mode === m ? 'on' : ''} onClick={() => switchMode(m)}>
             {m}
           </button>
@@ -122,10 +134,12 @@ export default function App() {
           {showSpine && <ReadinessMeter score={score} hint={spineHint} />}
 
           {mode === 'standard' && (
-            <StandardMode key={`std-${instance}`} profile={profile} commit={commit} track={track} autostart={standardAutostart} />
+            <StandardMode key={`std-${instance}`} profile={profile} commit={commit} track={track} autostart={standardAutostart} startAtId={startAtId} />
           )}
 
           {mode === 'seminar' && <SeminarMode key={`sem-${instance}`} profile={profile} commit={commit} track={track} />}
+
+          {mode === 'agent' && <AgentMode key={`agt-${instance}`} />}
 
           {mode === 'returning' &&
             (returningView === 'review' ? (

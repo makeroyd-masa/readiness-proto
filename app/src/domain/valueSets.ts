@@ -20,6 +20,15 @@ export type HouseholdType = (typeof HOUSEHOLD_TYPES)[number];
 export const VULNERABILITIES = ['none', 'cannot_advocate', 'young_kids'] as const;
 export type Vulnerability = (typeof VULNERABILITIES)[number];
 
+/**
+ * Medical-half signal (2nd half, asked at home — never on the shared seminar screen).
+ * Captures WHETHER medications/allergies/conditions exist and are documented, not the
+ * clinical detail itself (that free-text lives in Tier 2). Feeds the Emergency
+ * information score dimension.
+ */
+export const MEDICAL_NEEDS = ['none', 'undocumented', 'documented'] as const;
+export type MedicalNeed = (typeof MEDICAL_NEEDS)[number];
+
 export const GEO_RISKS = ['disaster', 'rural', 'travel', 'none'] as const;
 export type GeoRisk = (typeof GEO_RISKS)[number];
 
@@ -78,7 +87,7 @@ export type Band = (typeof BANDS)[number];
 
 // ---- Delivery modes (PRD §5) ----
 
-export const MODES = ['standard', 'seminar', 'returning'] as const;
+export const MODES = ['standard', 'seminar', 'returning', 'agent'] as const;
 export type Mode = (typeof MODES)[number];
 
 // ---- helpers ----

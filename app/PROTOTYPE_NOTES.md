@@ -13,9 +13,40 @@ npm run build      # typecheck + production build
 npx tsx verify.ts  # headless acceptance checks (PRD §19.7)
 ```
 
-Use the grey **dev bar** at the top to switch delivery mode (standard / seminar / returning),
-toggle **member / prospect / unknown** (self-declared in this prototype), and **reset** the
-persisted profile.
+Use the grey **dev bar** at the top to switch delivery mode (standard / seminar / returning /
+agent), toggle **member / prospect / unknown** (self-declared in this prototype), and **reset**
+the persisted profile.
+
+## The two-half flow and the seminar code loop
+
+The intake is authored in `content/flow.ts` as two halves separated by a `half_break` node:
+
+- **1st half — non-medical** (`household → role → geo → inventory → worry`). Safe for the
+  shared seminar screen (§5.2, §13).
+- **2nd half — medical** (`vulnerability → medications`). Completed privately at home; never
+  shown on the shared screen. The medications question is structured (`medicalNeeds`) and
+  **feeds the Emergency-information score**.
+
+**Standard** mode walks both halves end-to-end (the break is just a one-line transition).
+**Seminar** mode walks only the 1st half (data-driven from the flow, big-button), reveals a
+preliminary score, and offers a "text me my link" take-home. It saves the lead's 1st-half
+answers under a short **code** (`store/codeStore.ts`).
+
+The code is the spine of the sales loop:
+- **Agent** mode (agent tablet, demo) lists leads by code, shows their non-medical answers for
+  a warm intro, lets the agent tie a code → attendee name, and flips to *completed* when the
+  lead finishes at home.
+- **Finish-at-home** (`?resume=CODE` SMS link, or `?finish` → enter the card code) looks the
+  code up, restores the 1st-half answers, and resumes at the **medical half**.
+
+The summary (`Result.tsx`) makes the three previously-alluded actions real via `Tools.tsx`:
+**People & roles** (add contacts + name a decision-maker), **Go-bag + med supply** (checklist),
+and **Holistic household plan** (assembles everything → `printHouseholdPlan`). A simulated
+**Download-the-app** CTA marks the code completed. Each tool's writes lift the score.
+
+> **Code store fidelity:** the store is `localStorage` keyed by code — it demonstrates the full
+> mechanic **within one browser**. True cross-device (kiosk → the lead's own phone) is the one
+> gap the real backend closes later; it swaps in behind `store/codeStore.ts`.
 
 ## What this prototype demonstrates (and the v2 decisions it encodes)
 
@@ -27,7 +58,8 @@ persisted profile.
 | Scoring | Family-controlled dimensions only, pure/reproducible, **band-first** with % secondary, never 100% (§8). |
 | Artifact | One profile → three forms: living file (in-app), PDF snapshot, wallet/fridge card (§10). Real print/save. |
 | Coverage module | Optional, education-first; **prospect** (questions → offer) vs **member** (reference) variants; the v1 upsell line is removed (§9). |
-| Modes | Standard, agent-operated **seminar** (no sensitive data on screen), **returning** change-detection (§5). |
+| Modes | Standard (end-to-end), agent-operated **seminar** (non-medical 1st half only, no sensitive data on screen), **agent** tablet view (code → lead answers → completion), **returning** change-detection (§5). |
+| Seminar loop | A short **code** carries the 1st-half answers across kiosk → agent tablet → finish-at-home (simulated backend in `store/codeStore.ts`). |
 | Dead-branch fix | All enum values live in `domain/valueSets.ts`; `engine/guards.ts` fails the build on any branch/option outside its value-set (§18, §19.2). |
 
 ## Deliberate scope limits (agreed defaults — throwaway internal build)
@@ -68,11 +100,12 @@ persisted profile.
 ```
 src/domain/     valueSets.ts (single source of truth) · profile.ts · nodes.ts (8 types)
                 scoring.ts · steps.ts
-src/content/    flow.ts (~9 stages as data) · evidence.ts (Ready.gov) · coverage.ts
+src/content/    flow.ts (two halves split by half_break) · evidence.ts (Ready.gov) · coverage.ts
 src/engine/     engine.ts (deterministic walker) · guards.ts (dead-branch check)
-src/store/      profileStore.ts (persistence + event log)
-src/ui/         App.tsx · StandardMode · SeminarMode · ReturningMode · Result · common · print
-verify.ts       headless §19.7 acceptance checks
+src/store/      profileStore.ts (persistence + event log) · codeStore.ts (seminar code → answers)
+src/ui/         App.tsx · StandardMode · SeminarMode · ReturningMode · AgentMode · ResumeMode
+                Result · Tools (people/go-bag/plan) · common · print
+verify.ts       headless §19.7 acceptance checks (+ reorder / scored-medical / tool-writes)
 ```
 
 Content is authored data; the engine is code (§19.1). Adding a flow = adding data, not

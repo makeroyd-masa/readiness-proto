@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { Profile } from '../domain/profile';
 import type { FlowNode, QuestionNode } from '../domain/nodes';
 import { householdReadinessFlow as flow } from '../content/flow';
-import { applyAnswer, firstNode, nextNode } from '../engine/engine';
+import { applyAnswer, firstNode, nextNode, resolve } from '../engine/engine';
+import { setCodeStatus } from '../store/codeStore';
 import { Mark, SamBubble, UserBubble } from './common';
 import { Result } from './Result';
 
@@ -15,11 +16,13 @@ interface Props {
   track: (type: string, detail?: Record<string, unknown>) => void;
   /** start straight in the flow (used when resuming a partial intake). */
   autostart?: boolean;
+  /** resume at a specific node id (e.g. the 2nd/medical half after a seminar). */
+  startAtId?: string;
 }
 
 const asText = (say: string | ((p: Profile) => string), p: Profile) => (typeof say === 'function' ? say(p) : say);
 
-export function StandardMode({ profile, commit, track, autostart }: Props) {
+export function StandardMode({ profile, commit, track, autostart, startAtId }: Props) {
   const [phase, setPhase] = useState<Phase>(autostart ? 'flow' : 'intro');
   const [lines, setLines] = useState<Line[]>([]);
   const [active, setActive] = useState<QuestionNode | null>(null);
@@ -30,7 +33,8 @@ export function StandardMode({ profile, commit, track, autostart }: Props) {
   useEffect(() => {
     if (phase === 'flow' && !started.current) {
       started.current = true;
-      driveFrom(firstNode(flow, profile), profile);
+      const start = startAtId ? resolve(flow, startAtId, profile) : firstNode(flow, profile);
+      driveFrom(start, profile);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
@@ -106,6 +110,8 @@ export function StandardMode({ profile, commit, track, autostart }: Props) {
   function finishIntake() {
     setPhase('building');
     track('intake_complete');
+    // Reaching the plan completes a seminar follow-up (demo: agent tablet flips to "completed").
+    if (profile.activeCode) setCodeStatus(profile.activeCode, 'completed');
   }
 
   if (phase === 'intro') {

@@ -90,17 +90,27 @@ export function scoreProfile(p: Profile): Score {
 
   const dims: ScoredDimension[] = [];
 
-  // 1. Emergency information — meds/allergies/conditions record OR the card is built.
+  // 1. Emergency information — driven by the 2nd-half medical question (medicalNeeds),
+  //    a "have a meds list" inventory item, or a built card. `undocumented` is the
+  //    actionable gap; `documented`/`none` are handled. Null (seminar-only, not yet
+  //    at the medical half) falls back to the vulnerability signal.
+  const mn = p.tier1.medicalNeeds;
+  const emInfoGood = hasInventory(p, 'meds_record') || cardBuilt || mn === 'documented' || mn === 'none';
+  const emInfoSoon = mn === 'undocumented' || (mn == null && hasVulnerability(p));
   dims.push({
     id: 'emergency_information',
     name: 'Emergency information',
-    status: hasInventory(p, 'meds_record') || cardBuilt ? 'good' : hasVulnerability(p) ? 'soon' : 'watch',
-    weight: hasVulnerability(p) ? RAISED : BASE,
+    status: emInfoGood ? 'good' : emInfoSoon ? 'soon' : 'watch',
+    weight: hasVulnerability(p) || mn === 'undocumented' ? RAISED : BASE,
   });
 
   // 2. People & roles — findable contacts + decision-maker named where relevant.
-  const contacts = hasInventory(p, 'contacts');
-  const dm = hasInventory(p, 'decision_maker') || p.tier2.decisionMakerStatus === 'yes';
+  //    Satisfied by the seminar inventory OR by the People & roles tool's writes.
+  const contacts = hasInventory(p, 'contacts') || p.tier2.contacts.length > 0;
+  const dm =
+    hasInventory(p, 'decision_maker') ||
+    p.tier2.decisionMakerStatus === 'yes' ||
+    Boolean(p.tier2.decisionMakerName);
   const dmNeeded = hasVulnerability(p) || p.tier1.householdType !== 'solo';
   const peopleGood = contacts && (dm || !dmNeeded);
   dims.push({

@@ -14,6 +14,7 @@ import type {
   GeoRisk,
   HouseholdType,
   InventoryItem,
+  MedicalNeed,
   MemberStatus,
   Role,
   TopWorry,
@@ -24,6 +25,8 @@ import type {
 export interface Tier1 {
   householdType: HouseholdType | null;
   vulnerability: Vulnerability | null;
+  /** Medical-half signal (2nd half, at home): meds/allergies/conditions present + documented. */
+  medicalNeeds: MedicalNeed | null;
   geoRisk: GeoRisk | null;
   role: Role | null;
   topWorry: TopWorry | null;
@@ -32,12 +35,24 @@ export interface Tier1 {
   inventory: InventoryItem[]; // Stage 3 current-state, drives score
 }
 
+/** A single emergency contact row (People & roles tool). */
+export interface EmergencyContact {
+  name: string;
+  relationship: string;
+  phone: string;
+}
+
 /** Tier 2 — sensitive artifact fields. Only set after explicit consent. */
 export interface Tier2 {
   householdLabel: string | null;
   medications: string | null;
   allergiesConditions: string | null;
+  /** Legacy single-line contact (kept for the wallet card); primary of `contacts`. */
   emergencyContact: string | null;
+  /** Structured contact list built via the People & roles tool. */
+  contacts: EmergencyContact[];
+  /** Named medical decision-maker (People & roles tool). */
+  decisionMakerName: string | null;
   /** 'yes' | 'no' | 'not_sure' — "I'm not sure" is a first-class answer (PRD §4). */
   decisionMakerStatus: 'yes' | 'no' | 'not_sure' | null;
 }
@@ -67,14 +82,18 @@ export interface Profile {
   tier2: Tier2;
   consent: Consent;
   artifactsBuilt: ArtifactForm[];
+  /** Checked go-bag / medication-supply items (Go-bag tool). */
+  goBagItems: string[];
   coverageViewed: boolean;
   checkinSet: boolean;
+  /** The seminar follow-up code this session is finishing under (set on resume). */
+  activeCode: string | null;
   events: ProfileEvent[];
   /** schema version, so a persisted profile can be migrated later. */
   schemaVersion: number;
 }
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export function emptyProfile(sessionId: string, now: string): Profile {
   return {
@@ -84,6 +103,7 @@ export function emptyProfile(sessionId: string, now: string): Profile {
     tier1: {
       householdType: null,
       vulnerability: null,
+      medicalNeeds: null,
       geoRisk: null,
       role: null,
       topWorry: null,
@@ -96,6 +116,8 @@ export function emptyProfile(sessionId: string, now: string): Profile {
       medications: null,
       allergiesConditions: null,
       emergencyContact: null,
+      contacts: [],
+      decisionMakerName: null,
       decisionMakerStatus: null,
     },
     consent: {
@@ -105,8 +127,10 @@ export function emptyProfile(sessionId: string, now: string): Profile {
       healthInfoAcknowledged: false,
     },
     artifactsBuilt: [],
+    goBagItems: [],
     coverageViewed: false,
     checkinSet: false,
+    activeCode: null,
     events: [],
     schemaVersion: SCHEMA_VERSION,
   };

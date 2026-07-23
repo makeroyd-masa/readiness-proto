@@ -27,7 +27,14 @@ const LIBRARY: CandidateStep[] = [
     title: 'Create an emergency medical card',
     desc: 'A single card with medications, allergies, conditions, and contacts that a first responder or family member can find fast.',
     evidenceId: 'ready_medical_info',
-    rank: (p) => (hasInventory(p, 'meds_record') ? -Infinity : 3 + (V(p) ? 3 : 0) + (p.tier1.topWorry === 'info' ? 2 : 0)),
+    rank: (p) => {
+      const mn = p.tier1.medicalNeeds;
+      // Retired once documented (list exists / card built / nothing to note).
+      if (hasInventory(p, 'meds_record') || mn === 'none' || mn === 'documented' || p.tier2.medications || p.tier2.allergiesConditions) {
+        return -Infinity;
+      }
+      return 3 + (mn === 'undocumented' ? 3 : 0) + (V(p) ? 2 : 0) + (p.tier1.topWorry === 'info' ? 2 : 0);
+    },
   },
   {
     id: 'decision_maker',
@@ -35,7 +42,7 @@ const LIBRARY: CandidateStep[] = [
     desc: 'Decide — and document — who can speak for each adult if they cannot speak for themselves. "I\'m not sure" is a valid answer and creates this step.',
     evidenceId: 'ready_documents',
     rank: (p) => {
-      if (hasInventory(p, 'decision_maker') || p.tier2.decisionMakerStatus === 'yes') return -Infinity;
+      if (hasInventory(p, 'decision_maker') || p.tier2.decisionMakerStatus === 'yes' || p.tier2.decisionMakerName) return -Infinity;
       const needed = V(p) || p.tier1.householdType !== 'solo';
       return needed ? 3 + (V(p) ? 2 : 0) : 0.5;
     },
@@ -45,7 +52,7 @@ const LIBRARY: CandidateStep[] = [
     title: 'Build a shared emergency contact tree',
     desc: 'One list everyone can reach — who to call first, second, and who reaches whom.',
     evidenceId: 'ready_plan',
-    rank: (p) => (hasInventory(p, 'contacts') ? -Infinity : 2.5 + (p.tier1.topWorry === 'chaos' ? 2 : 0)),
+    rank: (p) => (hasInventory(p, 'contacts') || p.tier2.contacts.length > 0 ? -Infinity : 2.5 + (p.tier1.topWorry === 'chaos' ? 2 : 0)),
   },
   {
     id: 'go_bag',

@@ -6,6 +6,20 @@ import { getEvidence } from '../content/evidence';
 import { coverageCopy, COVERAGE_QUESTIONS, MASA_STATS } from '../content/coverage';
 import { Mark, SamBubble, Scorecard } from './common';
 import { printFullFile, printWalletCard } from './print';
+import { GoBagTool, HouseholdPlanTool, PeopleRolesTool } from './Tools';
+import { setCodeStatus } from '../store/codeStore';
+
+type ToolKey = 'people' | 'gobag' | 'plan';
+
+/** Which action a next-step card opens; null = no in-app tool (evidence link only). */
+const STEP_TOOL: Record<string, ToolKey | 'details'> = {
+  emergency_card: 'details',
+  contact_tree: 'people',
+  decision_maker: 'people',
+  go_bag: 'gobag',
+  med_supply: 'gobag',
+  written_plan: 'plan',
+};
 
 interface Props {
   profile: Profile;
@@ -31,6 +45,8 @@ export function Result({ profile, commit, track }: Props) {
   const steps = nextSteps(profile);
   const [coverageOpen, setCoverageOpen] = useState(false);
   const [consentOpen, setConsentOpen] = useState(false);
+  const [openTool, setOpenTool] = useState<ToolKey | null>(null);
+  const [appPrompted, setAppPrompted] = useState(false);
   const [chipsDone, setChipsDone] = useState<Set<string>>(new Set());
   const [t2, setT2] = useState({
     householdLabel: profile.tier2.householdLabel ?? '',
@@ -47,6 +63,20 @@ export function Result({ profile, commit, track }: Props) {
       track('coverage_viewed', { variant: profile.tier1.memberStatus });
       commit({ ...profile, coverageViewed: true });
     }
+  }
+
+  function stepActionFor(id: string): (() => void) | undefined {
+    const t = STEP_TOOL[id];
+    if (!t) return undefined;
+    if (t === 'details') return () => setConsentOpen(true);
+    return () => setOpenTool(t);
+  }
+
+  function downloadApp() {
+    setAppPrompted(true);
+    if (profile.activeCode) setCodeStatus(profile.activeCode, 'completed');
+    track('app_download_cta', { code: profile.activeCode });
+    alert('Prototype: sends a link to download the AccessNow app. Your code carries this file into the app, so nothing is re-entered.');
   }
 
   function saveTier2() {
@@ -86,8 +116,31 @@ export function Result({ profile, commit, track }: Props) {
       {/* Top 3 next steps */}
       <div className="section-h">Your top 3 next steps</div>
       {steps.map((s, i) => (
-        <StepCard key={s.id} step={s} index={i} onCoverage={openCoverage} />
+        <StepCard key={s.id} step={s} index={i} onCoverage={openCoverage} onAction={stepActionFor(s.id)} />
       ))}
+
+      {/* Take action now — the three actionable tools (docs/Updated experience.txt) */}
+      <div className="section-h">Take action now</div>
+      <div className="toolcards">
+        <button className="toolcard" onClick={() => setOpenTool('people')}>
+          <span className="tcicon">🪪</span>
+          <span className="tctitle">People &amp; roles</span>
+          <span className="tcdesc">Add emergency contacts and name who can make medical decisions.</span>
+        </button>
+        <button className="toolcard" onClick={() => setOpenTool('gobag')}>
+          <span className="tcicon">🎒</span>
+          <span className="tctitle">Go-bag + med supply</span>
+          <span className="tcdesc">Check off what's ready to grab in an emergency.</span>
+        </button>
+        <button className="toolcard" onClick={() => setOpenTool('plan')}>
+          <span className="tcicon">📋</span>
+          <span className="tctitle">Holistic plan</span>
+          <span className="tcdesc">Assemble everything into one printable household plan.</span>
+        </button>
+      </div>
+      {openTool === 'people' && <PeopleRolesTool profile={profile} commit={commit} track={track} onClose={() => setOpenTool(null)} />}
+      {openTool === 'gobag' && <GoBagTool profile={profile} commit={commit} track={track} onClose={() => setOpenTool(null)} />}
+      {openTool === 'plan' && <HouseholdPlanTool profile={profile} commit={commit} track={track} onClose={() => setOpenTool(null)} />}
 
       {/* Artifact — ungated (PRD §4 / HR-I-05) */}
       <div className="section-h">The file SAM made for you</div>
@@ -106,6 +159,15 @@ export function Result({ profile, commit, track }: Props) {
       <p className="optional-note" style={{ marginLeft: 2 }}>
         You can download the full file now — you never have to open the coverage conversation to get it.
       </p>
+
+      {/* Download-app CTA — simulated; carries this file into the app via the code. */}
+      <div className="appcta">
+        <div className="appcta-txt">
+          <div className="appcta-h">Save your results — get the app</div>
+          <div className="appcta-d">Download AccessNow to keep this file on your phone, update it any time, and share it with your household.</div>
+        </div>
+        <button className="btn btn-primary" onClick={downloadApp}>{appPrompted ? '✓ Check your phone' : 'Download the app'}</button>
+      </div>
 
       {consentOpen && (
         <div className="consent">
@@ -175,7 +237,7 @@ function Chip({ id, done, icon, label, onClick }: { id: string; done: Set<string
   );
 }
 
-function StepCard({ step, index, onCoverage }: { step: RankedStep; index: number; onCoverage: () => void }) {
+function StepCard({ step, index, onCoverage, onAction }: { step: RankedStep; index: number; onCoverage: () => void; onAction?: () => void }) {
   const ev = getEvidence(step.evidenceId);
   const isCoverage = step.seam === 'coverage';
   return (
@@ -183,17 +245,26 @@ function StepCard({ step, index, onCoverage }: { step: RankedStep; index: number
       <div className="num">STEP {index + 1}{isCoverage ? ' · optional' : ''}</div>
       <div className="st">{step.title}</div>
       <div className="sd">{step.desc}</div>
-      {isCoverage ? (
-        <span className="steplink" onClick={onCoverage}>
-          See the questions to ask →
-        </span>
-      ) : (
-        ev && (
-          <a className="evidence" href={ev.sourceUrl} target="_blank" rel="noreferrer" title={ev.attribution}>
-            {ev.publisher}: {ev.title}
-          </a>
-        )
-      )}
+      <div className="steprow">
+        {isCoverage ? (
+          <span className="steplink" onClick={onCoverage}>
+            See the questions to ask →
+          </span>
+        ) : (
+          <>
+            {onAction && (
+              <button className="btn btn-primary btn-sm" onClick={onAction}>
+                Do it now →
+              </button>
+            )}
+            {ev && (
+              <a className="evidence" href={ev.sourceUrl} target="_blank" rel="noreferrer" title={ev.attribution}>
+                {ev.publisher}: {ev.title}
+              </a>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -216,6 +287,9 @@ function ArtifactCard({
       <span className={`fv ${value ? '' : 'empty'}`}>{value || '— add this —'}</span>
     </div>
   );
+  const contactsSummary = t2.contacts.length
+    ? t2.contacts.map((c) => `${c.name}${c.phone ? ` · ${c.phone}` : ''}`).join('; ')
+    : t2.emergencyContact;
   return (
     <>
       <div className="artifact">
@@ -227,7 +301,8 @@ function ArtifactCard({
           {row('Name / label', t2.householdLabel)}
           {row('Medications', t2.medications)}
           {row('Allergies / conditions', t2.allergiesConditions)}
-          {row('Emergency contact', t2.emergencyContact)}
+          {row('Emergency contacts', contactsSummary)}
+          {row('Decision-maker', t2.decisionMakerName)}
         </div>
       </div>
       <div className="artifact-actions">

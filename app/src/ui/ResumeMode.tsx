@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Mark } from './common';
+import { getCodeSnapshot } from '../store/codeStore';
 
 /**
  * The home end of the seminar loop (PRD §5.2). Two ways in, both to the same
@@ -24,7 +25,9 @@ export function ResumeMode({
 }) {
   const [entered, setEntered] = useState('');
   const isEnter = variant === 'enterId';
-  const canContinue = isEnter ? entered.trim().length > 0 : true;
+  const trimmed = entered.trim();
+  const found = isEnter && trimmed.length > 0 ? Boolean(getCodeSnapshot(trimmed)) : false;
+  const canContinue = isEnter ? trimmed.length > 0 : true;
 
   return (
     <div className="stage">
@@ -34,8 +37,8 @@ export function ResumeMode({
         </div>
         <h1>Finish your plan at home</h1>
         <p>
-          You started your Family Readiness File at the seminar. Let's finish it — about five minutes — to get your
-          full plan, plus what to ask about emergency transport coverage.
+          You started your Family Readiness File at the seminar. Let's finish the last two private questions — about
+          five minutes — to get your full plan, plus what to ask about emergency transport coverage.
         </p>
 
         {isEnter ? (
@@ -50,6 +53,12 @@ export function ResumeMode({
               autoCapitalize="characters"
               autoComplete="off"
             />
+            {trimmed.length > 0 &&
+              (found ? (
+                <div className="resume-ok">✓ Found your seminar answers — we'll pick up where you left off.</div>
+              ) : (
+                <div className="resume-warn">We couldn't find that code on this device. You can still continue — we'll start a fresh check.</div>
+              ))}
           </div>
         ) : (
           <div className="previewmeter">
