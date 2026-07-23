@@ -168,16 +168,21 @@ console.log('\n11. A fully-prepared household reaches the top band; never 100% (
   ok('score never shows 100%', score.displayPct < 100);
 }
 
-console.log('\n12. Never 100%, bands ascend with preparation (recalibration sanity, HR-V3-10)');
+console.log('\n12. Persona baseline — band cutoffs re-baselined for the 6-dimension model (HR-V3-10)');
 {
+  const band = (o: Record<string, string | string[]>) => scoreProfile(run(A(o)).profile).band;
+  const frac = (o: Record<string, string | string[]>) => scoreProfile(run(A(o)).profile).fraction;
+  const cases: [string, Record<string, string | string[]>, string][] = [
+    ['unprepared solo', { q_household: 'solo', q_contacts: 'none', q_takecharge: 'none', q_inventory: ['none'], q_medications: 'undocumented', q_financial: 'little', q_worry: 'not_sure' }, 'Started'],
+    ['unprepared kids / disaster', { q_household: 'kids', q_vulnerability: 'young_kids', q_geo: 'disaster', q_contacts: 'none', q_takecharge: 'none', q_inventory: ['none'], q_medications: 'undocumented', q_financial: 'unsure', q_worry: 'chaos' }, 'Started'],
+    ['partial couple', { q_household: 'couple', q_contacts: 'informal', q_takecharge: 'informal', q_authority: 'none', q_inventory: ['meds_record'], q_medications: 'documented', q_financial: 'some', q_worry: 'chaos' }, 'Needs one key update'],
+    ['well-prepared couple (one gap)', { q_household: 'couple', q_contacts: 'documented', q_takecharge: 'documented', q_authority: 'documented', q_inventory: ['meds_record', 'go_bag', 'written_plan'], q_medications: 'documented', q_financial: 'some' }, 'Ready to share'],
+    ['fully-prepared multigen', { q_household: 'multigen', q_agingparent: 'yes', q_role: 'caregiver_nearby', q_contacts: 'documented', q_takecharge: 'documented', q_authority: 'documented', q_ltc: 'documented', q_inventory: ['meds_record', 'go_bag', 'written_plan'], q_medications: 'documented', q_financial: 'ample' }, 'Ready for check-in'],
+  ];
+  for (const [name, o, want] of cases) ok(`${name} → ${want}`, band(o) === want);
+  ok('more preparation scores strictly higher', frac(cases[0][1]) < frac(cases[2][1]) && frac(cases[2][1]) < frac(cases[4][1]));
   const empty = scoreProfile(emptyProfile('t', 'x'));
-  ok('empty profile is a valid band', Boolean(empty.band));
-  ok('empty displayPct <= 92', empty.displayPct <= 92);
-  const nothing = run(A({ q_contacts: 'none', q_takecharge: 'none', q_inventory: ['none'], q_medications: 'undocumented', q_financial: 'little', q_authority: 'none' })).profile;
-  const some = run(A({ q_contacts: 'documented', q_takecharge: 'informal', q_inventory: ['meds_record'], q_medications: 'documented', q_financial: 'some', q_authority: 'partial' })).profile;
-  const all = run(A({ q_contacts: 'documented', q_takecharge: 'documented', q_authority: 'documented', q_inventory: ['meds_record', 'go_bag', 'written_plan'], q_medications: 'documented', q_financial: 'ample' })).profile;
-  const f = (p: Profile) => scoreProfile(p).fraction;
-  ok('more preparation scores strictly higher', f(nothing) < f(some) && f(some) < f(all));
+  ok('empty profile is a valid band, never 100%', Boolean(empty.band) && empty.displayPct <= 92);
 }
 
 console.log('\n13. Product-neutrality: no scored gap / step title / question copy names a product (NF-10)');

@@ -175,10 +175,16 @@ export function scoreProfile(p: Profile): Score {
   };
 }
 
-/** TUNABLE cutoffs. Bands ascend weakest -> strongest. */
+/**
+ * Band cutoffs, re-baselined against representative personas for the v3 six-dimension
+ * model (HR-V3-10; see verify.ts "Persona baseline"). Bands ascend weakest -> strongest.
+ * The top cutoff (0.93) means "Ready for check-in" requires essentially everything solid:
+ * a single unmet dimension (e.g. a financial cushion still at "watch") lands in
+ * "Ready to share", not the maintenance band. Order confirmed as the intuitive ascent.
+ */
 export function bandFor(fraction: number): Band {
-  if (fraction < 0.4) return BANDS[0]; // Started
-  if (fraction < 0.7) return BANDS[1]; // Needs one key update
-  if (fraction < 0.9) return BANDS[2]; // Ready to share
-  return BANDS[3]; // Ready for check-in
+  if (fraction < 0.4) return BANDS[0]; // Started — real gaps across the board
+  if (fraction < 0.7) return BANDS[1]; // Needs one key update — some in place, meaningful gaps
+  if (fraction < 0.93) return BANDS[2]; // Ready to share — solid, a watch item or two
+  return BANDS[3]; // Ready for check-in — everything solid, maintenance mode
 }
