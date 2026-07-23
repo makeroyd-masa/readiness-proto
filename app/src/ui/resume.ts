@@ -24,7 +24,7 @@ export function resumeCode(p: Profile): string {
  * lead in (no manual entry). Works on localhost and on Pages.
  */
 export function resumeUrl(code: string): string {
-  return `${window.location.origin}${import.meta.env.BASE_URL}?resume=${encodeURIComponent(code)}`;
+  return `${window.location.origin}${import.meta.env.BASE_URL}returning?resume=${encodeURIComponent(code)}`;
 }
 
 /**
@@ -33,7 +33,7 @@ export function resumeUrl(code: string): string {
  * follow-up ID" screen (the agent hand-writes that ID on the card).
  */
 export function finishUrl(): string {
-  return `${window.location.origin}${import.meta.env.BASE_URL}?finish=1`;
+  return `${window.location.origin}${import.meta.env.BASE_URL}returning?finish=1`;
 }
 
 /** Render a QR for `text` as an inline SVG string (no network, embeds in print HTML). */

@@ -4,7 +4,8 @@ import type { FlowNode, QuestionNode } from '../domain/nodes';
 import { householdReadinessFlow as flow } from '../content/flow';
 import { applyAnswer, firstNode, nextNode, resolve } from '../engine/engine';
 import { setCodeStatus } from '../store/codeStore';
-import { Mark, SamBubble, UserBubble } from './common';
+import { UserBubble } from './common';
+import { SparkIcon } from './SparkIcon';
 import { Result } from './Result';
 
 type Phase = 'intro' | 'flow' | 'building' | 'result';
@@ -118,8 +119,8 @@ export function StandardMode({ profile, commit, track, autostart, startAtId }: P
     return (
       <div className="stage" ref={stageRef}>
         <div className="intro">
-          <div className="avatar" style={{ width: 46, height: 46, margin: '6px auto 16px' }}>
-            <Mark size={26} />
+          <div className="sam-badge" style={{ width: 46, height: 46, margin: '6px auto 16px' }}>
+            <SparkIcon size={26} />
           </div>
           <h1>Would your household know what to do in a medical emergency?</h1>
           <p>
@@ -154,7 +155,7 @@ export function StandardMode({ profile, commit, track, autostart, startAtId }: P
         <Result profile={profile} commit={commit} track={track} />
       ) : (
         <>
-          {lines.map((l, i) => (l.kind === 'sam' ? <SamBubble key={i}>{l.text}</SamBubble> : <UserBubble key={i} text={l.text} />))}
+          {lines.map((l, i) => (l.kind === 'sam' ? <SamLine key={i} text={l.text} /> : <UserBubble key={i} text={l.text} />))}
           {active && (
             <QuestionOptions
               key={active.id}
@@ -215,6 +216,18 @@ function QuestionOptions({
   );
 }
 
+/** In-app SAM message line — spark badge + advocate .sam-msg block. */
+function SamLine({ text }: { text: string }) {
+  return (
+    <div className="sam-line">
+      <div className="sam-badge">
+        <SparkIcon size={20} />
+      </div>
+      <div className="sam-msg">{text}</div>
+    </div>
+  );
+}
+
 const WHO: Record<string, string> = {
   solo: 'you',
   couple: 'you and your partner',
@@ -249,8 +262,8 @@ function Building({ profile, onDone }: { profile: Profile; onDone: () => void })
   return (
     <div className="stage">
       <div className="building">
-        <div className="avatar">
-          <Mark size={28} />
+        <div className="sam-badge" style={{ margin: '0 auto 16px' }}>
+          <SparkIcon size={28} />
         </div>
         <h2>Building your readiness plan…</h2>
         <div>

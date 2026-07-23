@@ -337,6 +337,84 @@ body {
 .arow .av { color: var(--masa-body); text-align: right; }
 .adnote { font-size: 11px; color: var(--masa-harbor); font-style: italic; margin-top: 10px; line-height: 1.45; }
 
+/* ===================================================================
+   masa-sam-advocate design layer — SCOPED to .sam-ui (in-app / menu /
+   returning landing + summary). Self-hosted fonts under CUSTOM family
+   names ("PoppinsSAM"/"OpenSansSAM") referenced only inside .sam-ui, so
+   the seminar and agent surfaces keep their exact current rendering.
+   =================================================================== */
+@font-face { font-family: 'PoppinsSAM'; font-style: normal; font-weight: 500; font-display: swap; src: url('../assets/fonts/poppins-500.woff2') format('woff2'); }
+@font-face { font-family: 'PoppinsSAM'; font-style: normal; font-weight: 600; font-display: swap; src: url('../assets/fonts/poppins-600.woff2') format('woff2'); }
+@font-face { font-family: 'PoppinsSAM'; font-style: normal; font-weight: 700; font-display: swap; src: url('../assets/fonts/poppins-700.woff2') format('woff2'); }
+@font-face { font-family: 'OpenSansSAM'; font-style: normal; font-weight: 400 700; font-display: swap; src: url('../assets/fonts/opensans-var.woff2') format('woff2'); }
+
+/* Advocate tint/surface tokens (additive — no collision with existing tokens) */
+:root {
+  --horizon-05: #f3f1f9;
+  --horizon-10: #e8e5f4;
+  --horizon-20: #d2cce8;
+  --tide-10: #e5f1fb;
+  --surface-card: #edeef6;
+  --surface-field: #f1f2f7;
+  --line: #e3e1ec;
+  --radius: 16px;
+}
+
+.sam-ui {
+  --font-display: 'PoppinsSAM', 'Poppins', system-ui, sans-serif;
+  --font-body: 'OpenSansSAM', 'Open Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
+}
+.sam-ui h1, .sam-ui h2, .sam-ui h3, .sam-ui h4, .sam-ui .section-h { font-family: var(--font-display); letter-spacing: -0.3px; }
+
+/* SAM identity badge (spark on a rounded-square Horizon tile) */
+.sam-badge { width: 38px; height: 38px; border-radius: 11px; background: var(--masa-horizon); display: flex; align-items: center; justify-content: center; flex: 0 0 38px; }
+
+/* In-app SAM message line */
+.sam-line { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 16px; }
+.sam-msg { background: var(--horizon-05); border-radius: 14px; padding: 13px 15px; font-size: 13.5px; color: #36304a; line-height: 1.5; white-space: pre-line; }
+.sam-msg b, .sam-msg strong { color: var(--masa-horizon); }
+
+/* Result's shared SAM bubble, restyled inside the advocate scope */
+.sam-ui .avatar { border-radius: 11px; }
+.sam-ui .bubble { background: var(--horizon-05); border-radius: 14px; color: #36304a; }
+.sam-ui .bubble strong { color: var(--masa-horizon); }
+
+/* User echo — subtle */
+.sam-ui .usermsg .ub { background: var(--masa-horizon); border-radius: 14px 14px 4px 14px; }
+
+/* Options → advocate choice chips (keep our vertical list) */
+.sam-ui .opts, .sam-ui .multinote, .sam-ui .cont { margin-left: 48px; }
+.sam-ui .opt { border: 1.5px solid var(--line); border-radius: 12px; font-family: var(--font-body); }
+.sam-ui .opt:hover { border-color: var(--masa-horizon); background: var(--horizon-05); transform: none; }
+.sam-ui .opt.sel { border-color: var(--masa-horizon); background: var(--horizon-05); color: var(--masa-horizon); }
+
+/* Buttons → pills */
+.sam-ui .btn { border-radius: 30px; font-family: var(--font-display); }
+
+/* Cards adopt the softer radius */
+.sam-ui .scorecard, .sam-ui .artifact, .sam-ui .step, .sam-ui .toolcard, .sam-ui .appcta { border-radius: var(--radius); }
+
+/* Menu landing */
+.menu-hero { text-align: center; padding: 10px 6px 4px; }
+.menu-hero .sam-badge { margin: 0 auto 14px; width: 46px; height: 46px; }
+.menu-hero h1 { font-weight: 700; font-size: 26px; color: var(--masa-horizon); margin-bottom: 8px; }
+.menu-hero p { font-size: 13.5px; color: #4a4258; line-height: 1.5; margin-bottom: 18px; }
+.menu-list { display: flex; flex-direction: column; gap: 11px; }
+.menu-card { display: block; text-decoration: none; background: #fff; border: 1.5px solid var(--line); border-radius: 14px; padding: 14px 15px; transition: all 0.15s; }
+.menu-card:hover { border-color: var(--masa-horizon); background: var(--horizon-05); transform: translateY(-1px); }
+.menu-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.menu-tag { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--masa-horizon); background: var(--horizon-10); border-radius: 20px; padding: 3px 10px; }
+.menu-chev { color: var(--masa-harbor); font-size: 22px; line-height: 1; }
+.menu-title { font-family: var(--font-display); font-weight: 600; font-size: 15.5px; color: #1c1340; margin-bottom: 3px; }
+.menu-desc { font-size: 12.5px; color: #5b5566; line-height: 1.45; }
+
+/* Returning / resume hero */
+.resume-hero { text-align: center; padding: 10px 6px 4px; }
+.resume-hero .sam-badge { margin: 0 auto 14px; width: 46px; height: 46px; }
+.resume-hero h1 { font-weight: 700; font-size: 24px; color: var(--masa-horizon); margin-bottom: 8px; }
+.resume-hero p { font-size: 13.5px; color: #4a4258; line-height: 1.5; margin-bottom: 18px; }
+
 @media print {
   body { background: #fff; padding: 0; }
   .device { box-shadow: none; max-width: none; min-height: 0; }

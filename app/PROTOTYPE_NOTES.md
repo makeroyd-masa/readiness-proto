@@ -13,9 +13,19 @@ npm run build      # typecheck + production build
 npx tsx verify.ts  # headless acceptance checks (PRD §19.7)
 ```
 
-Use the grey **dev bar** at the top to switch delivery mode (standard / seminar / returning /
-agent), toggle **member / prospect / unknown** (self-declared in this prototype), and **reset**
-the persisted profile.
+Each surface is its own **page** (the old dev-bar mode switcher is gone):
+
+| Path | Surface |
+|---|---|
+| `/` | Demo menu linking the four surfaces |
+| `/in-app` | Consumer "SAM" app — full flow, styled to match `masa-sam-advocate` |
+| `/seminar-view` | Seminar kiosk — non-medical 1st half, big buttons |
+| `/agent-view` | Agent tablet — look up a lead by code, see answers, track completion |
+| `/returning` | Finish-at-home — enter code → medical 2nd half → summary |
+
+Routing is `react-router-dom` (`BrowserRouter`, basename from the Vite `base`). GitHub Pages has
+no SPA rewrite, so a Vite plugin copies `dist/index.html` → `dist/404.html` and deep-link
+refreshes resolve. `memberStatus` defaults to `unknown` (the toggle is gone).
 
 ## The two-half flow and the seminar code loop
 
@@ -102,11 +112,23 @@ src/domain/     valueSets.ts (single source of truth) · profile.ts · nodes.ts 
                 scoring.ts · steps.ts
 src/content/    flow.ts (two halves split by half_break) · evidence.ts (Ready.gov) · coverage.ts
 src/engine/     engine.ts (deterministic walker) · guards.ts (dead-branch check)
-src/store/      profileStore.ts (persistence + event log) · codeStore.ts (seminar code → answers)
-src/ui/         App.tsx · StandardMode · SeminarMode · ReturningMode · AgentMode · ResumeMode
-                Result · Tools (people/go-bag/plan) · common · print
+src/store/      profileStore.ts (session id) · codeStore.ts (seminar code → answers)
+src/ui/         App.tsx (topbar + <Routes>) · Menu · InApp · SeminarMode · AgentMode · Returning
+                StandardMode · BigButtonStage (shared kiosk walker) · Result · Tools · SparkIcon
+                useDemoProfile · common · print · theme.css
+src/assets/fonts/  self-hosted Poppins + Open Sans (woff2)
 verify.ts       headless §19.7 acceptance checks (+ reorder / scored-medical / tool-writes)
 ```
+
+**Design layers.** The base theme is unchanged for seminar/agent. The
+`masa-sam-advocate` look is a **scoped layer** in `theme.css` under `.sam-ui` (in-app, menu,
+returning landing + summary): advocate tint tokens, self-hosted **Poppins/Open Sans** under
+custom family names (`PoppinsSAM`/`OpenSansSAM`) so seminar/agent keep their exact rendering, the
+**SparkIcon** SAM badge, `.sam-msg` bubbles, chip options, and pill buttons. The in-app flow,
+engine, scoring, and summary tools are unchanged — only presentation. `BigButtonStage` is the
+shared big-button walker used by both the seminar (1st half → `half_break`) and returning
+(2nd half `q_vulnerability` → `reveal`). Returning seeds a fixed phase-1 persona (couple, rural,
+meds-list + contacts already, worried about cost) since the demo has no real cross-device store.
 
 Content is authored data; the engine is code (§19.1). Adding a flow = adding data, not
 primitives.
